@@ -11,6 +11,8 @@ let serverProcess;
 let mlBackendProcess;
 let isQuitting = false;
 let mlBackendManager = null;
+const startUrl = process.env.ELECTRON_START_URL || 'http://localhost:5000';
+const isRemoteOnlyMode = String(process.env.ELECTRON_REMOTE_ONLY || '0') === '1';
 
 // Create window
 function createWindow() {
@@ -26,7 +28,6 @@ function createWindow() {
   });
 
   // Load URL
-  const startUrl = process.env.ELECTRON_START_URL || 'http://localhost:5000';
   mainWindow.loadURL(startUrl);
 
   // DevTools disabled in production
@@ -149,6 +150,12 @@ function stopServer() {
 // App event handlers
 app.on('ready', async () => {
   try {
+    if (isRemoteOnlyMode) {
+      console.log('[App] Starting in remote-only mode. URL:', startUrl);
+      createWindow();
+      return;
+    }
+
     console.log('Starting ML Backend...');
     
     // Initialize and start ML Backend Manager
@@ -195,6 +202,11 @@ app.on('before-quit', async (event) => {
   isQuitting = true;
 
   console.log('[App] Before quit - cleaning up');
+
+  if (isRemoteOnlyMode) {
+    app.quit();
+    return;
+  }
   
   // Stop ML Backend
   if (mlBackendManager && mlBackendManager.isReady) {

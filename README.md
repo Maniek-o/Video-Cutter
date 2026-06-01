@@ -91,6 +91,35 @@ Jeśli korzystasz z zewnętrznego skryptu treningowego, ustaw dodatkowo:
 
 Bez tych zmiennych start lub wznowienie zewnętrznego treningu zwróci czytelny błąd konfiguracji, zamiast używać twardych ścieżek Windows.
 
+### Payload plików modelu poza GitHub
+
+Jeżeli chcesz przenieść wszystkie duże prywatne pliki modelu do Unraid jednym ruchem, użyj skryptu:
+
+PowerShell:
+
+./tools/unraid/build-unraid-model-payload.ps1
+
+Skrypt tworzy:
+- `unraid-transfer/video-cutter-unraid-payload/`
+- `unraid-transfer/video-cutter-unraid-payload.zip`
+
+Wypakuj payload i skopiuj zawartość folderu `nsfw-model` do:
+- `/mnt/user/appdata/video-cutter/nsfw-model`
+
+### Electron na Windows jako okienko WebUI Unraid
+
+Do uruchamiania Video Cutter jako okna Electron podłączonego do serwera na Unraid użyj:
+
+PowerShell:
+
+./tools/unraid/create-desktop-shortcut-video-cutter-unraid.ps1 -TargetUrl "http://IP_UNRAID:5001"
+
+To tworzy skrót na pulpicie:
+- `Video-cutter (unraid)`
+
+Uruchamianie ręczne bez skrótu:
+- `tools/unraid/launch-video-cutter-unraid.bat`
+
 ## 📦 Obsługiwane Formaty
 
 | Format | Rozszerzenie | Maks. Rozmiar |
