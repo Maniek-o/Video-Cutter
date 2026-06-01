@@ -1,6 +1,14 @@
 Video Cutter Unraid helper scripts
 
-1) Build payload zip with model data not stored in GitHub
+Files and locations:
+- tools/unraid/build-unraid-model-payload.ps1
+- tools/unraid/import-model-payload-unraid.sh
+- tools/unraid/update-video-cutter-unraid.sh
+- tools/unraid/install-template-unraid.sh
+- tools/unraid/create-desktop-shortcut-video-cutter-unraid.ps1
+- tools/unraid/launch-video-cutter-unraid.bat
+
+1) Build payload zip with model data not stored in GitHub (Windows)
 
 PowerShell:
 ./tools/unraid/build-unraid-model-payload.ps1
@@ -9,10 +17,34 @@ Output:
 - unraid-transfer/video-cutter-unraid-payload/
 - unraid-transfer/video-cutter-unraid-payload.zip
 
-Copy nsfw-model content from the payload to:
+2) Copy payload zip to Unraid and import model files
+
+Example on Unraid:
+chmod +x tools/unraid/import-model-payload-unraid.sh
+./tools/unraid/import-model-payload-unraid.sh /path/to/video-cutter-unraid-payload.zip
+
+Target folder on Unraid:
 /mnt/user/appdata/video-cutter/nsfw-model
 
-2) Create Windows desktop shortcut for Electron remote WebUI
+3) Install Unraid template automatically
+
+On Unraid:
+chmod +x tools/unraid/install-template-unraid.sh
+./tools/unraid/install-template-unraid.sh
+
+Template file is created at:
+/boot/config/plugins/dockerMan/templates-user/my-video-cutter.xml
+
+4) Update/recreate container automatically on Unraid
+
+On Unraid:
+chmod +x tools/unraid/update-video-cutter-unraid.sh
+./tools/unraid/update-video-cutter-unraid.sh
+
+Optional env overrides:
+IMAGE=ghcr.io/maniek-o/video-cutter:latest MODEL_HOST_PATH=/mnt/user/appdata/video-cutter/nsfw-model WEBUI_PORT=5001 API_PORT=5003 USE_DRI=1 ./tools/unraid/update-video-cutter-unraid.sh
+
+5) Create Windows desktop shortcut for Electron remote WebUI
 
 PowerShell:
 ./tools/unraid/create-desktop-shortcut-video-cutter-unraid.ps1 -TargetUrl "http://IP_UNRAID:5001"
@@ -20,9 +52,9 @@ PowerShell:
 This creates:
 Desktop/Video-cutter (unraid).lnk
 
-3) Launch Electron in remote-only mode manually
+6) Launch Electron in remote-only mode manually
 
 tools/unraid/launch-video-cutter-unraid.bat
 
-Optional: set URL before launch
+Optional URL env before launch:
 set VIDEO_CUTTER_UNRAID_URL=http://IP_UNRAID:5001
