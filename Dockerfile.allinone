@@ -1,6 +1,8 @@
 # Dockerfile: All-in-one (nginx + FastAPI backend)
 FROM python:3.10-slim
 
+ENV NSFW_MODEL_DATA_DIR=/data/nsfw-model
+
 # --- Backend dependencies ---
 WORKDIR /app
 COPY ml_backend/requirements.txt ./
@@ -20,6 +22,9 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN rm /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+RUN mkdir -p /data/nsfw-model
+
+VOLUME ["/data/nsfw-model"]
 
 # --- Expose ports ---
 EXPOSE 5001 5003

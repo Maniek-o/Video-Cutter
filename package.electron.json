@@ -1,0 +1,12 @@
+{
+  "name": "video-cutter-electron",
+  "version": "1.0.0",
+  "main": "electron.js",
+  "description": "Electron desktop wrapper for Video Cutter app.",
+  "scripts": {
+    "electron:start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^28.2.3"
+  }
+}

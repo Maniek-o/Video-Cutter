@@ -1,0 +1,73 @@
+{
+  "name": "video-cutter",
+  "version": "1.0.0",
+  "description": "Narzędzie do wycinania fragmentów video bez utraty jakości",
+  "main": "main.js",
+  "homepage": "./",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "electron:start": "electron .",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:5000 && electron .\"",
+    "electron-build": "node bump-version.js && npm run build-web && npm run build-app",
+    "build-web": "echo 'Web already built'",
+    "build-app": "electron-builder --win --publish never",
+    "build-portable": "electron-builder --win portable --publish never"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "electron": "^31.7.7",
+    "electron-builder": "^26.0.0",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.videocutter.app",
+    "productName": "Video Cutter",
+    "asar": false,
+    "files": [
+      "main.js",
+      "preload.js",
+      "server.js",
+      "public/**/*",
+      "node_modules/**/*",
+      "nsfw_detector.py",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "public"
+    },
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "ffprobe-static": "^3.1.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "multer": "^2.1.1",
+    "sharp": "^0.34.5"
+  }
+}

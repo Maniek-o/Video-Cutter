@@ -19,7 +19,7 @@ class ModelFineTuner:
     
     def __init__(self, detector):
         self.detector = detector
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cpu')
         print(f"[INIT] Fine-tuner initialized (device: {self.device})")
     
     def prepare_training_data(self):

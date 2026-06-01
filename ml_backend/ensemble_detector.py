@@ -41,7 +41,7 @@ class EnsembleNSFWDetector:
         self.model_dir = Path(model_dir)
         self.model_dir.mkdir(parents=True, exist_ok=True)
 
-        self.device = device if torch.cuda.is_available() else 'cpu'
+        self.device = 'cpu'
         self.confidence_threshold = 0.35  # Ultra sensitivity
 
         # Initialize models

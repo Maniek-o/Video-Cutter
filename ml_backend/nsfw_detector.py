@@ -19,6 +19,13 @@ except ImportError:
     print("[WARN] Warning: PyTorch dependencies not installed. Install with: pip install torch opennsfw2 pillow")
 
 
+def get_model_data_dir():
+    configured = os.getenv('NSFW_MODEL_DATA_DIR')
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return (Path(__file__).resolve().parent.parent / 'Pliki do modelu NFSW').resolve()
+
+
 class NSFWDetector:
     """
     Main NSFW Detection Engine
@@ -29,7 +36,7 @@ class NSFWDetector:
 
     def __init__(self, model_dir=None, db_path=None, dataset_dir=None, frames_dir=None):
         # Domyślna ścieżka do folderu z danymi
-        base_data_dir = Path(__file__).parent.parent / 'Pliki do modelu NFSW'
+        base_data_dir = get_model_data_dir()
         self.model_dir = Path(model_dir) if model_dir else base_data_dir / 'models'
         self.model_dir.mkdir(parents=True, exist_ok=True)
 

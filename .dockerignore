@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+Dockerfile
+.git
+.gitignore
+cache
+output
+uploads
+Pliki do modelu NFSW
+.venv
+ml_backend/venv
+ml_backend/models
+ml_backend/feedback.db

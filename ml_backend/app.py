@@ -16,7 +16,7 @@ from typing import Optional
 import threading
 import logging
 
-from nsfw_detector import NSFWDetector, get_detector
+from nsfw_detector import NSFWDetector, get_detector, get_model_data_dir
 from fine_tuner import get_fine_tuner
 
 # Try to import ensemble detector, but fail gracefully
@@ -59,9 +59,8 @@ async def startup_event():
                 global ensemble_detector
                 try:
                     logger.info("[START] Initializing Ensemble Detector (ResNet50 + EfficientNet + ViT)...")
-                    device = 'cuda' if __import__('torch').cuda.is_available() else 'cpu'
-                    ensemble_detector = get_ensemble_detector(device=device)
-                    logger.info(f"[OK] Ensemble Detector ready on {device.upper()}")
+                    ensemble_detector = get_ensemble_detector(device='cpu')
+                    logger.info("[OK] Ensemble Detector ready on CPU")
                 except Exception as e:
                     logger.error(f"[ERROR] Ensemble Detector failed: {e}")
 
@@ -115,7 +114,7 @@ async def save_profile_preview(person_id: str, request: ProfilePreviewRequest):
         import os
         from datetime import datetime
         # Directory for profile previews
-        previews_dir = os.path.join(os.path.dirname(__file__), "..", "Pliki do modelu NFSW", "profile_previews")
+        previews_dir = str(get_model_data_dir() / 'profile_previews')
         os.makedirs(previews_dir, exist_ok=True)
         # Save thumbnail as PNG file
         filename = f"{person_id}_slot{request.slot_index}_{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
@@ -438,7 +437,7 @@ if __name__ == "__main__":
     print(f"[START] Starting ML FastAPI server on port {port}...")
     uvicorn.run(
         app,
-        host="127.0.0.1",
+        host="0.0.0.0",
         port=port,
         log_level="info"
     )

@@ -280,11 +280,9 @@ C:\Users\[USERNAME]\AppData\Local\Programs\Python\Python311\python.exe -m venv v
 - Subsequent installs use cache
 - Use `pip install -U pip` to update pip first
 
-### GPU acceleration (optional)
-```bash
-# Install CUDA-enabled PyTorch
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-```
+### Runtime mode
+- ML inference runs in CPU mode
+- Video processing can use Intel Quick Sync via ffmpeg/VAAPI on supported hardware
 
 ### Port already in use
 Change port in `app.py`:

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Cutter - Narzędzie do wycinania fragmentów video</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    
+    <div class="container">
+        <header>
+            <h1>✂️ Video Cutter</h1>
+            <p class="subtitle">Wycinaj fragmenty video bez utraty jakości</p>
+
+            <button type="button" class="btn-settings" id="settingsBtn" title="Ustawienia">⚙️</button>
+        </header>
+
+        <main>
+            <!-- Upload Section -->
+            <section class="section" id="uploadSection">
+                <h2>1️⃣ Wgrywanie pliku video</h2>
+                <div class="upload-area" id="uploadArea">
+                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <input type="file" id="fileInput" accept=".mp4,.mkv,.ts,.hevc,.h265" multiple hidden>
+                </div>
+                <div id="uploadProgress" class="upload-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p id="progressText">Wgrywanie: 0%</p>
+                </div>
+            </section>
+
+            <!-- Queue Section -->
+            <section class="section" id="queueSection" style="display: none;">
+                <div class="queue-header">
+                    <h2>
+                        📋 Kolejka plików (<span id="queueCount">0</span>)
+                        <span class="queue-inline-summary" id="queueInlineSummary">0/0 · 0%</span>
+                    </h2>
+                    <button type="button" class="btn btn-secondary btn-queue-toggle" id="queueCollapseBtn" aria-expanded="false" title="Rozwiń listę kolejki">▾ Rozwiń</button>
+                    <div class="queue-global-bar">
+                        <span id="queueProgressText" class="queue-progress-text">0/0</span>
+                        <div class="queue-progress-track">
+                            <div id="queueProgressFill" class="queue-progress-fill"></div>
+                        </div>
+                    </div>
+                    <div class="queue-actions">
+                        <button type="button" class="btn btn-warning" id="queuePauseBtn">⏸ Pauza</button>
+                        <button type="button" class="btn btn-secondary" id="queueClearDoneBtn">🗑 Wyczyść gotowe</button>
+                        <label class="turbo-label">
+                            <input type="checkbox" id="turboModeCheck"> ⚡ Turbo
+                        </label>
+                    </div>
+                </div>
+                <div id="queueList" class="queue-list"></div>
+                <div id="queueErrorDialog" class="queue-error-dialog" style="display: none;">
+                    <div class="queue-error-box">
+                        <p class="queue-error-title">⚠️ Błąd przetwarzania pliku</p>
+                        <p id="queueErrorMsg" class="queue-error-details"></p>
+                        <div class="queue-error-actions">
+                            <button type="button" class="btn btn-primary" id="queueErrorRetry">🔄 Ponów próbę</button>
+                            <button type="button" class="btn btn-secondary" id="queueErrorSkip">⏭ Pomiń plik</button>
+                            <button type="button" class="btn btn-danger" id="queueErrorStop">🛑 Zatrzymaj kolejkę</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Video Preview Section -->
+            <section class="section" id="previewSection" style="display: none;">
+                <h2>2️⃣ Podgląd i generowanie screenów</h2>
+                <div class="video-info">
+                    <p><strong>Plik:</strong> <span id="videoName"></span></p>
+                    <p><strong>Osoba:</strong> <span id="personName"></span></p>
+                    <p><strong>Długość:</strong> <span id="videoDuration"></span></p>
+                    <p><strong>Interwał screenów:</strong> <span id="intervalValue">25</span>s
+                        <input type="range" id="intervalSlider" min="5" max="60" value="25" step="5">
+                    </p>
+                    <p><strong>Próg modelu NSFW:</strong> <span id="thresholdValue">0.50</span>
+                        <input type="range" id="thresholdSlider" min="0.1" max="0.9" value="0.50" step="0.05">
+                        <span style="font-size: 0.85em; color: #666;">(niżej = więcej Xxx, wyżej = mniej Xxx)</span>
+                    </p>
+                </div>
+                <div class="thumb-actions-row">
+                    <button type="button" class="btn btn-primary" id="generateThumbsBtn">Wygeneruj screeny</button>
+                    <button type="button" class="btn btn-secondary btn-video-nav" id="prevVideoBtn" title="Poprzednie video" aria-label="Poprzednie video">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path d="M15 6l-6 6 6 6"/>
+                        </svg>
+                        <span>Poprzednie</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-video-nav" id="nextVideoBtn" title="Następne video" aria-label="Następne video">
+                        <span>Następne</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path d="M9 6l6 6-6 6"/>
+                        </svg>
+                    </button>
+                    <span id="queueFilePosition" class="queue-file-position" aria-live="polite">--/0</span>
+                </div>
+                <div id="thumbContainer" class="thumbnails-container"></div>
+            </section>
+
+            <!-- Timeline Section -->
+            <section class="section" id="timelineSection" style="display: none;">
+                <h2>3️⃣ Zaznaczanie fragmentów do wycięcia</h2>
+                <div class="timeline-controls">
+                    <label>
+                        <input type="checkbox" id="selectAllCheck"> Zaznacz wszystkie
+                    </label>
+                    <button type="button" class="btn btn-secondary" id="clearSelectionBtn">Wyczyść zaznaczenie</button>
+                    <p class="multi-select-hint">💡 Klik = zaznacz/odznaacz | Drag = zakres | Ctrl+Klik = toggle | Shift+Klik = rozszerz | Sąsiadujące screeny = 1 fragment</p>
+                </div>
+                <div class="timeline-wrapper">
+                    <div class="timeline" id="timeline"></div>
+                    <div class="selection-layer" id="selectionLayer"></div>
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button type="button" class="btn btn-primary" id="viewSegmentsBtn">👁️ Podgląd zaznaczonych fragmentów (<span id="segmentsCount">0</span>)</button>
+                </div>
+            </section>
+
+            <!-- Segments Modal -->
+            <div class="segments-modal" id="segmentsModal">
+                <div class="modal-content-segments">
+                    <div class="modal-header-segments">
+                        <h2>Zaznaczone fragmenty</h2>
+                        <button type="button" class="modal-close-btn" id="closeSegmentsBtn">✕</button>
+                    </div>
+                    <div id="segmentsList"></div>
+                </div>
+            </div>
+
+            <!-- Settings Modal -->
+            <div class="settings-modal" id="settingsModal">
+                <div class="modal-content-settings">
+                    <div class="modal-header-settings">
+                        <h2>⚙️ Ustawienia</h2>
+                        <button type="button" class="modal-close-btn" id="closeSettingsBtn">✕</button>
+                    </div>
+                    <div class="settings-tabs" role="tablist" aria-label="Zakładki ustawień">
+                        <button type="button" class="settings-tab-btn active" data-tab="folders">Foldery</button>
+                        <button type="button" class="settings-tab-btn" data-tab="model">Model</button>
+                        <button type="button" class="settings-tab-btn" data-tab="profiles">Profile</button>
+                    </div>
+                    <div class="settings-content">
+                        <div class="settings-tab-panel active" data-tab="folders">
+                            <div class="settings-section">
+                                <h3>📂 Folder źródłowy (otwarcia plików)</h3>
+                                <div class="folder-picker">
+                                    <input type="text" id="sourceFolderPath" placeholder="Ścieżka folderu źródłowego" readonly>
+                                    <button type="button" class="btn btn-primary" id="sourceFolderBtn">Wybierz folder</button>
+                                    <button type="button" class="btn btn-secondary" id="sourceFolderClear" style="display: none;">✕ Wyczyść</button>
+                                </div>
+                                <p class="folder-hint">💡 Jeśli wybierzesz folder, przycisk "Wybierz plik" będzie otwierał ten folder</p>
+                            </div>
+
+                            <div class="settings-section">
+                                <h3>💾 Folder docelowy (eksport)</h3>
+                                <div class="folder-picker">
+                                    <input type="text" id="destinationFolderPath" placeholder="Ścieżka folderu docelowego" readonly>
+                                    <button type="button" class="btn btn-primary" id="destinationFolderBtn">Wybierz folder</button>
+                                    <button type="button" class="btn btn-secondary" id="destinationFolderClear" style="display: none;">✕ Wyczyść</button>
+                                </div>
+                                <p class="folder-hint">💡 Wyeksportowane fragmenty będą zapisywane w tym folderze</p>
+                            </div>
+                        </div>
+
+                        <div class="settings-tab-panel" data-tab="model">
+                            <div class="settings-section">
+                                <h3>⏰ Retencja próbek modelu (lokalnie)</h3>
+                                <div class="retention-picker">
+                                    <label for="retentionDaysInput">Liczba dni przechowywania próbek profilu osoby:</label>
+                                    <div style="display: flex; gap: 10px; margin-top: 8px; align-items: center;">
+                                        <input type="number" id="retentionDaysInput" min="7" max="365" value="90" style="width: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                                        <span id="retentionDaysValue" style="font-weight: bold; color: #3b82f6;">90 dni</span>
+                                        <button type="button" class="btn btn-secondary" id="retentionDaysSave" style="margin-left: 10px;">💾 Zapisz</button>
+                                    </div>
+                                </div>
+                                <p class="folder-hint">💡 Próbki starsze niż ta liczba dni zostaną automatycznie usunięte. Minimalna wartość: 7 dni</p>
+                            </div>
+
+                            <div class="settings-section">
+                                <h3>🎯 Foldery do nauki modelu NSFW</h3>
+                                <p class="folder-hint">Model uczy się na wszystkich plikach i wszystkich klatkach z wybranych folderów (rekurencyjnie, także podfoldery).</p>
+                                <div class="settings-inline-actions">
+                                    <button type="button" class="btn btn-primary" id="modelTrainingFolderBtn">Dodaj folder NSFW</button>
+                                    <button type="button" class="btn btn-secondary" id="modelTrainingSaveFoldersBtn">Zapisz foldery</button>
+                                    <button type="button" class="btn btn-success" id="modelTrainingStartBtn">Dodaj do kolejki nauki</button>
+                                    <button type="button" class="btn btn-danger" id="modelTrainingStopBtn">Zatrzymaj bieżący trening</button>
+                                    <button type="button" class="btn btn-secondary" id="modelTrainingPauseResumeBtn">Wstrzymaj/Wznow</button>
+                                    <button type="button" class="btn btn-primary" id="modelTrainingResumeBtn">Wznów ostatni trening</button>
+                                </div>
+                                <div id="modelTrainingFoldersList" class="model-training-folders-list"></div>
+                            </div>
+
+                            <div class="settings-section">
+                                <h3>� Testuj własny plik</h3>
+                                <p class="folder-hint">Wpisz pełną ścieżkę do obrazka i kliknij Testuj — model NSFW zwróci wynik.</p>
+                                <div style="display: flex; gap: 8px; margin-top: 8px; align-items: center;">
+                                    <input type="text" id="nsfwTestImagePath" placeholder="np. C:\obrazki\foto.jpg" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                    <button type="button" class="btn btn-primary" id="nsfwTestRunBtn">Testuj</button>
+                                </div>
+                                <div id="nsfwTestResult" style="margin-top: 10px; font-size: 13px; display: none;"></div>
+                            </div>
+
+                            <div class="settings-section">
+                                <h3>�📊 Statystyki modelu</h3>
+                                <div id="modelProfilesSummary" class="model-info-grid"></div>
+                            </div>
+
+                            <div class="settings-section">
+                                <h3>⚙️ Status nauki</h3>
+                                <div class="settings-inline-actions">
+                                    <button type="button" class="btn btn-secondary" id="modelTrainingRefreshBtn">Odśwież teraz</button>
+                                </div>
+                                <div id="modelRuntimeSummary" class="model-info-grid"></div>
+                                <div id="modelTrainingRuntime" class="model-info-grid" style="margin-top: 12px;"></div>
+                                <div id="modelTrainingQueue" class="model-training-queue" style="margin-top: 12px;"></div>
+                            </div>
+                        </div>
+
+                        <div class="settings-tab-panel" data-tab="profiles">
+                            <div class="settings-section profiles-advanced-row">
+                                <div class="settings-inline-actions">
+                                    <label class="profiles-advanced-toggle">
+                                        <input type="checkbox" id="profilesAdvancedToggle"> Zaawansowane
+                                    </label>
+                                </div>
+                                <p class="folder-hint">W trybie zaawansowanym pokazywane są akcje destrukcyjne (np. usuwanie profilu).</p>
+                            </div>
+
+                            <div class="settings-section" id="profilePreviewSelector" style="display: none;">
+                                <h3>🖼️ Wybór podglądu GIF z bieżących screenów</h3>
+                                <p class="folder-hint">Wybierz 1-12 klatek tylko z aktualnie zaznaczonych screenów. Jeśli zaznaczysz i zapiszesz jedną konkretną klatkę, profil dostanie 25-sekundowy klip video z tego przedziału zamiast samego obrazka.</p>
+                                <div class="settings-inline-actions">
+                                    <select id="profilePreviewTarget" style="min-width: 220px; padding: 8px;"></select>
+                                    <button type="button" class="btn btn-secondary" id="profilePreviewSaveBtn">Zapisz podgląd do profilu</button>
+                                </div>
+                                <div id="profilePreviewFrames" class="profile-preview-frames"></div>
+                                <div style="margin-top: 12px; text-align: right;">
+                                    <button type="button" class="btn btn-primary" id="profileSlotSaveBtn">Zapisz</button>
+                                </div>
+                            </div>
+
+                            <div class="settings-section">
+                                <h3>👤 Istniejące profile osobowe</h3>
+                                <div id="profilesGrid" class="profiles-grid"></div>
+                                <div style="margin-top: 12px; text-align: right;">
+                                    <button type="button" class="btn btn-secondary" id="editProfilePreviewBtn">Edytuj podgląd</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Settings Actions -->
+                        <div class="settings-actions">
+                            <button type="button" class="btn btn-secondary" id="resetSettingsBtn">🔄 Przywróć domyślne</button>
+                            <button type="button" class="btn btn-success" id="closeSettingsConfirmBtn">✓ Gotowe</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <section class="section" id="cutSection" style="display: none;">
+                <h2>4️⃣ Łączenie i eksport</h2>
+                <button type="button" class="btn btn-success" id="cutBtn">Połącz fragmenty i eksportuj</button>
+                <div id="cutProgress" class="cut-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="cutProgressFill"></div>
+                    </div>
+                    <p id="cutProgressText">Przetwarzanie: 0%</p>
+                </div>
+                <div id="resultsList" class="results-list"></div>
+                <div id="downloadProgress" class="download-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="downloadProgressFill"></div>
+                    </div>
+                    <p id="downloadProgressText">Pobieranie: 0/0</p>
+                </div>
+                <button type="button" class="btn btn-secondary" id="openOutputBtn">Otwórz folder z plikami</button>
+                <button type="button" class="btn btn-primary" id="downloadAllBtn" style="display: none;">⬇️ Pobierz wszystkie fragmenty</button>
+            </section>
+        </main>
+    </div>
+
+    <script defer src="js/main.js"></script>
+</body>
+</html>
