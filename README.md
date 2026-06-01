@@ -67,7 +67,7 @@ docker run -d \
   -p 5003:5003 \
   -e NSFW_MODEL_DATA_DIR=/data/nsfw-model \
   -v /mnt/user/appdata/video-cutter/nsfw-model:/data/nsfw-model \
-  ghcr.io/Maniek-o/video-cutter:latest
+  ghcr.io/maniek-o/video-cutter:latest
 ```
 
 Na Unraid skopiuj swoje prywatne pliki modelu do katalogu hosta, na przykład `/mnt/user/appdata/video-cutter/nsfw-model`, a następnie zamontuj go w kontenerze pod `/data/nsfw-model`.
