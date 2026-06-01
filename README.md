@@ -52,6 +52,8 @@ npm run electron
 
 Prywatne pliki modelu NSFW nie są częścią repozytorium GitHub ani kontekstu budowania obrazu. Aplikacja obsługuje zewnętrzny katalog danych modelu przez zmienną środowiskową `NSFW_MODEL_DATA_DIR`.
 
+Jeśli Unraid nie pokazuje aktualizacji kontenera, najczęściej powód jest prosty: kontener nie korzysta z obrazu z rejestru albo rejestr nie dostaje nowego `latest`. Żeby aktualizacje były wykrywane, używaj obrazu `ghcr.io/maniek-o/video-cutter:latest`. Lokalny build z Dockerfile lub własna nazwa obrazu nie będzie raportowana przez mechanizm aktualizacji Unraid.
+
 Domyślne lokalizacje:
 - Windows/dev: `Pliki do modelu NFSW` w katalogu projektu
 - Kontener: `/data/nsfw-model`
@@ -61,13 +63,26 @@ Przykład uruchomienia:
 ```bash
 docker run -d \
   --name video-cutter \
-  -p 5000:5000 \
+  -p 5001:5001 \
+  -p 5003:5003 \
   -e NSFW_MODEL_DATA_DIR=/data/nsfw-model \
   -v /mnt/user/appdata/video-cutter/nsfw-model:/data/nsfw-model \
   ghcr.io/Maniek-o/video-cutter:latest
 ```
 
 Na Unraid skopiuj swoje prywatne pliki modelu do katalogu hosta, na przykład `/mnt/user/appdata/video-cutter/nsfw-model`, a następnie zamontuj go w kontenerze pod `/data/nsfw-model`.
+
+Przykładowa konfiguracja kontenera w Unraid:
+- Repository: `ghcr.io/maniek-o/video-cutter:latest`
+- Network Type: `bridge`
+- WebUI: `http://[IP]:[PORT:5001]`
+- Port map 1: `5001` host -> `5001` container
+- Port map 2: `5003` host -> `5003` container
+- Path: `/mnt/user/appdata/video-cutter/nsfw-model` host -> `/data/nsfw-model` container
+- Variable: `NSFW_MODEL_DATA_DIR=/data/nsfw-model`
+- Device: `/dev/dri` -> `/dev/dri`
+
+Po wypchnięciu zmian do `master` workflow GitHub Actions opublikuje nowy obraz `ghcr.io/maniek-o/video-cutter:latest`. Dopiero wtedy Unraid będzie miał co wykryć jako nową wersję.
 
 Jeśli korzystasz z zewnętrznego skryptu treningowego, ustaw dodatkowo:
 - `NSFW_TRAINING_SCRIPT`

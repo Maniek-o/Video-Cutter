@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  video-cutter:
+    image: ghcr.io/maniek-o/video-cutter:latest
+    container_name: video-cutter
+    ports:
+      - "5001:5001"
+      - "5003:5003"
+    environment:
+      NSFW_MODEL_DATA_DIR: /data/nsfw-model
+    devices:
+      - /dev/dri:/dev/dri
+    volumes:
+      - /mnt/user/appdata/video-cutter/nsfw-model:/data/nsfw-model
+    restart: unless-stopped
