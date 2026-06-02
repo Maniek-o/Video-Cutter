@@ -35,6 +35,11 @@ chmod +x tools/unraid/install-template-unraid.sh
 Template file is created at:
 /boot/config/plugins/dockerMan/templates-user/my-video-cutter.xml
 
+The template exposes 3 independent editable locations in Unraid Edit:
+- NSFW source path (host)       -> mounted to /data/nsfw-source
+- NSFW payload path (host)      -> mounted to /data/nsfw-payload
+- NSFW model data path (host)   -> mounted to /data/nsfw-model (runtime target)
+
 4) Update/recreate container automatically on Unraid
 
 On Unraid:

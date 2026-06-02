@@ -30,7 +30,9 @@ cat > "${TEMPLATE_PATH}" <<'EOF'
 
   <Config Name="WebUI Port" Target="5001" Default="5001" Mode="tcp" Description="WebUI port" Type="Port" Display="always" Required="true" Mask="false">5001</Config>
   <Config Name="ML API Port" Target="5003" Default="5003" Mode="tcp" Description="ML backend API port" Type="Port" Display="always" Required="true" Mask="false">5003</Config>
-  <Config Name="NSFW model data path" Target="/data/nsfw-model" Default="/mnt/user/appdata/video-cutter/nsfw-model" Mode="rw" Description="Host folder with private NSFW model files" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/video-cutter/nsfw-model</Config>
+  <Config Name="NSFW source path (host)" Target="/data/nsfw-source" Default="/mnt/user/appdata/video-cutter/nsfw-source" Mode="rw" Description="Optional source location for raw NSFW files" Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/video-cutter/nsfw-source</Config>
+  <Config Name="NSFW payload path (host)" Target="/data/nsfw-payload" Default="/mnt/user/appdata/video-cutter/nsfw-payload" Mode="rw" Description="Optional payload/staging location" Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/video-cutter/nsfw-payload</Config>
+  <Config Name="NSFW model data path (host)" Target="/data/nsfw-model" Default="/mnt/user/appdata/video-cutter/nsfw-model" Mode="rw" Description="Target runtime model location used by the app" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/video-cutter/nsfw-model</Config>
   <Config Name="NSFW_MODEL_DATA_DIR" Target="NSFW_MODEL_DATA_DIR" Default="/data/nsfw-model" Mode="" Description="Container path for model data" Type="Variable" Display="always" Required="true" Mask="false">/data/nsfw-model</Config>
   <Config Name="Intel Quick Sync device" Target="/dev/dri" Default="/dev/dri" Mode="" Description="Pass Intel iGPU device to container" Type="Device" Display="always" Required="false" Mask="false">/dev/dri</Config>
 </Container>
