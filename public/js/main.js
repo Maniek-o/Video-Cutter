@@ -201,6 +201,70 @@ const FEEDBACK_COUNT_FOR_RETRAIN = 5;
 const DEFAULT_OUTPUT_PATH = './output';
 const MODEL_SETTINGS_REFRESH_MS = 5000;
 const PROFILE_PREVIEW_FRAME_LIMIT = 12;
+const MAX_SOURCE_FOLDERS = 3;
+
+function safeJsonParse(rawValue, fallbackValue) {
+  if (!rawValue) {
+    return fallbackValue;
+  }
+  try {
+    return JSON.parse(rawValue);
+  } catch (err) {
+    return fallbackValue;
+  }
+}
+
+function normalizeSourceFolders(folders) {
+  if (!Array.isArray(folders)) {
+    return [];
+  }
+
+  const seen = new Set();
+  const normalized = [];
+
+  folders.forEach((folder) => {
+    const cleaned = String(folder || '').trim();
+    if (!cleaned || seen.has(cleaned)) {
+      return;
+    }
+    seen.add(cleaned);
+    normalized.push(cleaned);
+  });
+
+  return normalized.slice(0, MAX_SOURCE_FOLDERS);
+}
+
+function clampSourceFolderIndex(index, folders) {
+  const parsed = Number(index);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return 0;
+  }
+
+  if (!Array.isArray(folders) || folders.length === 0) {
+    return 0;
+  }
+
+  return Math.min(Math.trunc(parsed), folders.length - 1);
+}
+
+function loadInitialSourceFolders() {
+  const storedFolders = safeJsonParse(localStorage.getItem('sourceFolders'), []);
+  const normalized = normalizeSourceFolders(storedFolders);
+
+  if (normalized.length > 0) {
+    return normalized;
+  }
+
+  const legacyFolder = String(localStorage.getItem('sourceFolderPath') || '').trim();
+  return legacyFolder ? [legacyFolder] : [];
+}
+
+const initialSourceFolders = loadInitialSourceFolders();
+const initialActiveSourceFolderIndex = clampSourceFolderIndex(
+  localStorage.getItem('activeSourceFolderIndex'),
+  initialSourceFolders
+);
+const initialSourceFolderPath = initialSourceFolders[initialActiveSourceFolderIndex] || '';
 
 // State Management
 let appState = {
@@ -221,7 +285,9 @@ let appState = {
   nsfwAnalysis: {},
   isCutting: false,
   filesDownloaded: false,
-  sourceFolderPath: localStorage.getItem('sourceFolderPath') || '',
+  sourceFolders: initialSourceFolders,
+  activeSourceFolderIndex: initialActiveSourceFolderIndex,
+  sourceFolderPath: initialSourceFolderPath,
   destinationFolderPath: localStorage.getItem('destinationFolderPath') || DEFAULT_OUTPUT_PATH,
   lastExportFolderPath: '',
   currentPersonId: null,
@@ -302,6 +368,8 @@ const closeSettingsConfirmBtn = document.getElementById('closeSettingsConfirmBtn
 const sourceFolderBtn = document.getElementById('sourceFolderBtn');
 const sourceFolderPath = document.getElementById('sourceFolderPath');
 const sourceFolderClear = document.getElementById('sourceFolderClear');
+const sourceFolderPanels = document.getElementById('sourceFolderPanels');
+const sourceFolderPanelsMode = document.getElementById('sourceFolderPanelsMode');
 const destinationFolderBtn = document.getElementById('destinationFolderBtn');
 const destinationFolderPath = document.getElementById('destinationFolderPath');
 const destinationFolderClear = document.getElementById('destinationFolderClear');
@@ -363,6 +431,109 @@ if (!uploadArea) {
       fileInput.click();
     }
   });
+}
+
+function persistSourceFolderState() {
+  const folders = normalizeSourceFolders(appState.sourceFolders);
+  appState.sourceFolders = folders;
+  appState.activeSourceFolderIndex = clampSourceFolderIndex(appState.activeSourceFolderIndex, folders);
+  appState.sourceFolderPath = folders[appState.activeSourceFolderIndex] || '';
+
+  localStorage.setItem('sourceFolders', JSON.stringify(folders));
+  localStorage.setItem('activeSourceFolderIndex', String(appState.activeSourceFolderIndex || 0));
+  localStorage.setItem('sourceFolderPath', appState.sourceFolderPath || '');
+}
+
+function addSourceFolder(folderPath) {
+  const cleaned = String(folderPath || '').trim();
+  if (!cleaned) {
+    return { added: false, activated: false, removedOldest: false };
+  }
+
+  let folders = normalizeSourceFolders(appState.sourceFolders);
+  const existingIndex = folders.indexOf(cleaned);
+
+  if (existingIndex >= 0) {
+    appState.sourceFolders = folders;
+    appState.activeSourceFolderIndex = existingIndex;
+    appState.sourceFolderPath = cleaned;
+    persistSourceFolderState();
+    return { added: false, activated: true, removedOldest: false };
+  }
+
+  let removedOldest = false;
+  if (folders.length >= MAX_SOURCE_FOLDERS) {
+    folders = folders.slice(1);
+    removedOldest = true;
+  }
+
+  folders.push(cleaned);
+  appState.sourceFolders = folders;
+  appState.activeSourceFolderIndex = folders.length - 1;
+  appState.sourceFolderPath = cleaned;
+  persistSourceFolderState();
+  return { added: true, activated: true, removedOldest };
+}
+
+function setActiveSourceFolder(index) {
+  const folders = normalizeSourceFolders(appState.sourceFolders);
+  if (folders.length === 0) {
+    appState.sourceFolders = [];
+    appState.activeSourceFolderIndex = 0;
+    appState.sourceFolderPath = '';
+    persistSourceFolderState();
+    return false;
+  }
+
+  const nextIndex = clampSourceFolderIndex(index, folders);
+  appState.sourceFolders = folders;
+  appState.activeSourceFolderIndex = nextIndex;
+  appState.sourceFolderPath = folders[nextIndex] || '';
+  persistSourceFolderState();
+  return true;
+}
+
+function getSourcePanelsMode() {
+  const configured = Number(localStorage.getItem('sourceFolderPanelsMode') || '2');
+  if (configured === 1 || configured === 2 || configured === 3) {
+    return configured;
+  }
+  return 2;
+}
+
+function renderSourceFolderPanels() {
+  if (!sourceFolderPanels) {
+    return;
+  }
+
+  const folders = normalizeSourceFolders(appState.sourceFolders);
+  appState.sourceFolders = folders;
+  appState.activeSourceFolderIndex = clampSourceFolderIndex(appState.activeSourceFolderIndex, folders);
+  appState.sourceFolderPath = folders[appState.activeSourceFolderIndex] || '';
+
+  const mode = getSourcePanelsMode();
+  sourceFolderPanels.className = `source-folder-panels cols-${mode}`;
+
+  if (sourceFolderPanelsMode) {
+    sourceFolderPanelsMode.value = String(mode);
+  }
+
+  if (folders.length === 0) {
+    sourceFolderPanels.innerHTML = '<div class="source-folder-empty">Brak folderów. Dodaj 1-3 lokalizacje źródłowe.</div>';
+    return;
+  }
+
+  sourceFolderPanels.innerHTML = folders
+    .map((folder, index) => {
+      const isActive = index === appState.activeSourceFolderIndex;
+      return `
+        <button type="button" class="source-folder-panel ${isActive ? 'active' : ''}" data-index="${index}" title="${folder}">
+          <span class="source-folder-panel-label">Panel ${index + 1}</span>
+          <span class="source-folder-panel-path">${folder}</span>
+        </button>
+      `;
+    })
+    .join('');
 }
 
 // Helper: handle selected file
@@ -3756,6 +3927,10 @@ async function refreshModelSettingsData() {
 
 // Update Settings Display
 function updateSettingsDisplay() {
+  appState.sourceFolders = normalizeSourceFolders(appState.sourceFolders);
+  appState.activeSourceFolderIndex = clampSourceFolderIndex(appState.activeSourceFolderIndex, appState.sourceFolders);
+  appState.sourceFolderPath = appState.sourceFolders[appState.activeSourceFolderIndex] || '';
+
   if (sourceFolderPath) {
     sourceFolderPath.value = appState.sourceFolderPath || '(nie ustawiono)';
   }
@@ -3763,7 +3938,7 @@ function updateSettingsDisplay() {
     destinationFolderPath.value = appState.destinationFolderPath || DEFAULT_OUTPUT_PATH;
   }
   if (sourceFolderClear) {
-    sourceFolderClear.style.display = appState.sourceFolderPath ? 'inline-flex' : 'none';
+    sourceFolderClear.style.display = appState.sourceFolders.length > 0 ? 'inline-flex' : 'none';
   }
   if (destinationFolderClear) {
     destinationFolderClear.style.display = appState.destinationFolderPath !== DEFAULT_OUTPUT_PATH ? 'inline-flex' : 'none';
@@ -3778,6 +3953,7 @@ function updateSettingsDisplay() {
     retentionDaysValue.textContent = `${savedRetentionDays} dni`;
   }
 
+  renderSourceFolderPanels();
   renderModelTrainingFolders();
 }
 
@@ -3894,10 +4070,15 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const path = await window.electron?.ipcRenderer?.invoke('open-folder-dialog');
       if (path) {
-        appState.sourceFolderPath = path;
-        localStorage.setItem('sourceFolderPath', path);
+        const result = addSourceFolder(path);
         updateSettingsDisplay();
-        showSuccess(`✓ Folder źródłowy: ${path}`);
+        if (result.added && result.removedOldest) {
+          showSuccess(`✓ Dodano folder źródłowy: ${path} (zastąpiono najstarszy panel)`);
+        } else if (result.added) {
+          showSuccess(`✓ Dodano folder źródłowy: ${path}`);
+        } else {
+          showSuccess(`✓ Ustawiono aktywny folder źródłowy: ${path}`);
+        }
       }
     } catch (err) {
       showError('Błąd wyboru folderu: ' + err.message);
@@ -3907,10 +4088,36 @@ document.addEventListener('DOMContentLoaded', () => {
   sourceFolderClear?.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    appState.sourceFolders = [];
+    appState.activeSourceFolderIndex = 0;
     appState.sourceFolderPath = '';
+    localStorage.removeItem('sourceFolders');
+    localStorage.removeItem('activeSourceFolderIndex');
     localStorage.setItem('sourceFolderPath', '');
     updateSettingsDisplay();
-    showSuccess('✓ Folder źródłowy usunięty');
+    showSuccess('✓ Foldery źródłowe usunięte');
+  });
+
+  sourceFolderPanels?.addEventListener('click', (e) => {
+    const panelButton = e.target.closest('.source-folder-panel');
+    if (!panelButton) {
+      return;
+    }
+
+    const nextIndex = Number(panelButton.dataset.index);
+    if (!setActiveSourceFolder(nextIndex)) {
+      return;
+    }
+
+    updateSettingsDisplay();
+    showSuccess(`✓ Aktywny panel źródłowy: ${appState.sourceFolderPath}`);
+  });
+
+  sourceFolderPanelsMode?.addEventListener('change', (e) => {
+    const selectedMode = Number(e.target?.value);
+    const normalizedMode = selectedMode === 1 || selectedMode === 2 || selectedMode === 3 ? selectedMode : 2;
+    localStorage.setItem('sourceFolderPanelsMode', String(normalizedMode));
+    renderSourceFolderPanels();
   });
 
   destinationFolderBtn?.addEventListener('click', async (e) => {
@@ -4131,10 +4338,14 @@ document.addEventListener('DOMContentLoaded', () => {
     e.stopPropagation();
     const userConfirm = window.confirm('Czy na pewno chcesz zresetować wszystkie ustawienia?');
     if (userConfirm) {
+      appState.sourceFolders = [];
+      appState.activeSourceFolderIndex = 0;
       appState.sourceFolderPath = '';
       appState.destinationFolderPath = DEFAULT_OUTPUT_PATH;
       appState.recentFolders = [];
       localStorage.removeItem('sourceFolderPath');
+      localStorage.removeItem('sourceFolders');
+      localStorage.removeItem('activeSourceFolderIndex');
       localStorage.removeItem('destinationFolderPath');
       localStorage.removeItem('recentFolders');
       localStorage.removeItem('selectionHistory');

@@ -154,10 +154,19 @@
                                 <h3>📂 Folder źródłowy (otwarcia plików)</h3>
                                 <div class="folder-picker">
                                     <input type="text" id="sourceFolderPath" placeholder="Ścieżka folderu źródłowego" readonly>
-                                    <button type="button" class="btn btn-primary" id="sourceFolderBtn">Wybierz folder</button>
-                                    <button type="button" class="btn btn-secondary" id="sourceFolderClear" style="display: none;">✕ Wyczyść</button>
+                                    <button type="button" class="btn btn-primary" id="sourceFolderBtn">Dodaj folder (max 3)</button>
+                                    <button type="button" class="btn btn-secondary" id="sourceFolderClear" style="display: none;">✕ Wyczyść wszystkie</button>
                                 </div>
-                                <p class="folder-hint">💡 Jeśli wybierzesz folder, przycisk "Wybierz plik" będzie otwierał ten folder</p>
+                                <div class="settings-inline-actions source-folder-mode-row">
+                                    <label for="sourceFolderPanelsMode">Widok paneli:</label>
+                                    <select id="sourceFolderPanelsMode" class="source-folder-mode-select">
+                                        <option value="1">1 panel</option>
+                                        <option value="2" selected>2 panele</option>
+                                        <option value="3">3 panele</option>
+                                    </select>
+                                </div>
+                                <div id="sourceFolderPanels" class="source-folder-panels cols-2"></div>
+                                <p class="folder-hint">💡 Kliknij panel, aby ustawić aktywną lokalizację. "Wybierz plik" otworzy aktywny folder.</p>
                             </div>
 
                             <div class="settings-section">
