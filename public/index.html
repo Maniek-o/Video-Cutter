@@ -136,6 +136,21 @@
                 </div>
             </div>
 
+            <div class="segments-modal" id="serverFileBrowserModal">
+                <div class="modal-content-segments modal-content-browser">
+                    <div class="modal-header-segments">
+                        <h2>Pliki z folderu źródłowego</h2>
+                        <button type="button" class="modal-close-btn" id="closeServerFileBrowserBtn">✕</button>
+                    </div>
+                    <div class="server-browser-path" id="serverFileBrowserPath">(brak folderu)</div>
+                    <div class="server-browser-toolbar">
+                        <button type="button" class="btn btn-secondary" id="serverFileBrowserUpBtn">⬆ Wyżej</button>
+                        <button type="button" class="btn btn-secondary" id="serverFileBrowserRefreshBtn">Odśwież</button>
+                    </div>
+                    <div id="serverFileBrowserList" class="server-browser-list"></div>
+                </div>
+            </div>
+
             <!-- Settings Modal -->
             <div class="settings-modal" id="settingsModal">
                 <div class="modal-content-settings">

@@ -595,6 +595,75 @@ main {
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
+.modal-content-browser {
+    max-width: 760px;
+}
+
+.server-browser-path {
+    padding: 12px 14px;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    background: var(--gray-50);
+    color: var(--gray-700);
+    font-family: Consolas, Monaco, monospace;
+    font-size: 0.9em;
+    margin-bottom: 12px;
+    overflow-wrap: anywhere;
+}
+
+.server-browser-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.server-browser-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 180px;
+}
+
+.server-browser-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    background: white;
+}
+
+.server-browser-item-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.server-browser-item-name {
+    font-weight: 600;
+    color: var(--gray-900);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.server-browser-item-meta {
+    color: var(--gray-500);
+    font-size: 0.84em;
+}
+
+.server-browser-empty {
+    border: 1px dashed var(--gray-300);
+    border-radius: 8px;
+    background: var(--gray-50);
+    color: var(--gray-500);
+    font-style: italic;
+    padding: 16px;
+}
+
 .modal-header-segments {
     display: flex;
     justify-content: space-between;

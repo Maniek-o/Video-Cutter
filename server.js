@@ -1919,6 +1919,69 @@ app.post('/api/upload-from-path', (req, res) => {
   }
 });
 
+app.post('/api/browse-server-files', (req, res) => {
+  const requestedDirPath = String(req.body?.dirPath || '').trim();
+
+  if (!requestedDirPath) {
+    return res.status(400).json({ error: 'Brak dirPath.' });
+  }
+
+  const resolvedDirPath = path.resolve(requestedDirPath);
+  if (!fs.existsSync(resolvedDirPath)) {
+    return res.status(404).json({ error: 'Folder nie istnieje: ' + resolvedDirPath });
+  }
+
+  let stat;
+  try {
+    stat = fs.statSync(resolvedDirPath);
+  } catch (err) {
+    return res.status(400).json({ error: 'Nie udało się odczytać folderu: ' + err.message });
+  }
+
+  if (!stat.isDirectory()) {
+    return res.status(400).json({ error: 'Podana ścieżka nie jest folderem.' });
+  }
+
+  try {
+    const allowedFormats = new Set(['.mp4', '.mkv', '.ts', '.hevc', '.h265']);
+    const entries = fs.readdirSync(resolvedDirPath, { withFileTypes: true })
+      .filter((entry) => {
+        if (entry.isDirectory()) {
+          return true;
+        }
+        if (!entry.isFile()) {
+          return false;
+        }
+        return allowedFormats.has(path.extname(entry.name).toLowerCase());
+      })
+      .map((entry) => {
+        const entryPath = path.join(resolvedDirPath, entry.name);
+        const entryStat = entry.isFile() ? fs.statSync(entryPath) : null;
+        return {
+          name: entry.name,
+          path: entryPath,
+          type: entry.isDirectory() ? 'directory' : 'file',
+          size: entryStat?.size || 0
+        };
+      })
+      .sort((left, right) => {
+        if (left.type !== right.type) {
+          return left.type === 'directory' ? -1 : 1;
+        }
+        return left.name.localeCompare(right.name, 'pl', { sensitivity: 'base', numeric: true });
+      });
+
+    const parentPath = path.dirname(resolvedDirPath);
+    res.json({
+      currentPath: resolvedDirPath,
+      parentPath: parentPath !== resolvedDirPath ? parentPath : null,
+      entries
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Nie udało się pobrać listy plików: ' + err.message });
+  }
+});
+
 // Get video file
 app.get('/api/video/:filename', (req, res) => {
   const filePath = path.join(uploadsDir, req.params.filename);

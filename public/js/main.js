@@ -156,6 +156,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // API Endpoints
 const API = {
   UPLOAD: '/api/upload',
+  BROWSE_SERVER_FILES: '/api/browse-server-files',
   CLEANUP: '/api/cleanup',
   CUT: '/api/cut',
   SAVE_ALL: '/api/save-all',
@@ -361,6 +362,12 @@ const personModelStatsPanelId = 'personModelStatsPanel';
 const segmentsModal = document.getElementById('segmentsModal');
 const viewSegmentsBtn = document.getElementById('viewSegmentsBtn');
 const closeSegmentsBtn = document.getElementById('closeSegmentsBtn');
+const serverFileBrowserModal = document.getElementById('serverFileBrowserModal');
+const closeServerFileBrowserBtn = document.getElementById('closeServerFileBrowserBtn');
+const serverFileBrowserPath = document.getElementById('serverFileBrowserPath');
+const serverFileBrowserUpBtn = document.getElementById('serverFileBrowserUpBtn');
+const serverFileBrowserRefreshBtn = document.getElementById('serverFileBrowserRefreshBtn');
+const serverFileBrowserList = document.getElementById('serverFileBrowserList');
 const settingsModal = document.getElementById('settingsModal');
 const settingsBtn = document.getElementById('settingsBtn');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
@@ -397,6 +404,7 @@ const profilePreviewTarget = document.getElementById('profilePreviewTarget');
 const profilePreviewFrames = document.getElementById('profilePreviewFrames');
 const profilePreviewSaveBtn = document.getElementById('profilePreviewSaveBtn');
 const profilesAdvancedToggle = document.getElementById('profilesAdvancedToggle');
+let currentServerBrowserPath = '';
 
 // Event Listeners
 console.log('Attaching event listeners...');
@@ -408,11 +416,13 @@ if (!uploadArea) {
 } else {
   uploadArea.addEventListener('click', async () => {
     console.log('Upload area clicked!');
-    // Simple: always use fileInput in browser, IPC in Electron
     if (!window.electron?.ipcRenderer) {
-      console.log('No electron.ipcRenderer - using file input');
-      // Browser: use native file input
-      fileInput.click();
+      if (!appState.sourceFolderPath) {
+        showError('Ustaw aktywny folder źródłowy w zakładce Foldery.');
+        return;
+      }
+
+      openServerFileBrowser(appState.sourceFolderPath);
       return;
     }
 
@@ -431,6 +441,108 @@ if (!uploadArea) {
       fileInput.click();
     }
   });
+}
+
+function formatServerBrowserItemMeta(entry) {
+  if (entry.type === 'directory') {
+    return 'Folder';
+  }
+  const size = Number(entry.size || 0);
+  if (!Number.isFinite(size) || size <= 0) {
+    return 'Plik video';
+  }
+  const sizeMb = size / (1024 * 1024);
+  return `Plik video · ${sizeMb.toFixed(sizeMb >= 100 ? 0 : 1)} MB`;
+}
+
+function renderServerFileBrowser(payload) {
+  currentServerBrowserPath = payload?.currentPath || currentServerBrowserPath || '';
+
+  if (serverFileBrowserPath) {
+    serverFileBrowserPath.textContent = currentServerBrowserPath || '(brak folderu)';
+  }
+
+  if (serverFileBrowserUpBtn) {
+    serverFileBrowserUpBtn.disabled = !payload?.parentPath;
+    serverFileBrowserUpBtn.dataset.parentPath = payload?.parentPath || '';
+  }
+
+  if (!serverFileBrowserList) {
+    return;
+  }
+
+  const entries = Array.isArray(payload?.entries) ? payload.entries : [];
+  if (entries.length === 0) {
+    serverFileBrowserList.innerHTML = '<div class="server-browser-empty">Brak folderów i plików video w tej lokalizacji.</div>';
+    return;
+  }
+
+  serverFileBrowserList.innerHTML = entries.map((entry) => `
+    <div class="server-browser-item">
+      <div class="server-browser-item-main">
+        <div class="server-browser-item-name">${entry.type === 'directory' ? '📁' : '🎬'} ${entry.name}</div>
+        <div class="server-browser-item-meta">${formatServerBrowserItemMeta(entry)}</div>
+      </div>
+      <button type="button" class="btn btn-secondary server-browser-action" data-path="${entry.path}" data-type="${entry.type}">${entry.type === 'directory' ? 'Otwórz' : 'Wybierz'}</button>
+    </div>
+  `).join('');
+
+  serverFileBrowserList.querySelectorAll('.server-browser-action').forEach((button) => {
+    button.addEventListener('click', async (event) => {
+      const targetPath = event.currentTarget.dataset.path;
+      const targetType = event.currentTarget.dataset.type;
+      if (!targetPath) {
+        return;
+      }
+
+      if (targetType === 'directory') {
+        await openServerFileBrowser(targetPath);
+        return;
+      }
+
+      serverFileBrowserModal?.classList.remove('active');
+      await handleFileSelected(targetPath);
+    });
+  });
+}
+
+async function openServerFileBrowser(dirPath) {
+  const requestedPath = String(dirPath || '').trim();
+  if (!requestedPath) {
+    showError('Brak ustawionego folderu źródłowego.');
+    return;
+  }
+
+  serverFileBrowserModal?.classList.add('active');
+  if (serverFileBrowserPath) {
+    serverFileBrowserPath.textContent = 'Ładowanie...';
+  }
+  if (serverFileBrowserList) {
+    serverFileBrowserList.innerHTML = '<div class="server-browser-empty">Ładowanie listy plików...</div>';
+  }
+
+  try {
+    const response = await fetch(API.BROWSE_SERVER_FILES, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dirPath: requestedPath })
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.error || 'Nie udało się odczytać folderu.');
+    }
+
+    renderServerFileBrowser(payload);
+  } catch (err) {
+    if (serverFileBrowserList) {
+      serverFileBrowserList.innerHTML = `<div class="server-browser-empty">${err.message}</div>`;
+    }
+    if (serverFileBrowserPath) {
+      serverFileBrowserPath.textContent = requestedPath;
+    }
+    showError('Błąd odczytu folderu źródłowego: ' + err.message);
+  }
 }
 
 function persistSourceFolderState() {
@@ -4072,6 +4184,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   closeSegmentsBtn?.addEventListener('click', () => {
     segmentsModal.classList.remove('active');
+  });
+
+  closeServerFileBrowserBtn?.addEventListener('click', () => {
+    serverFileBrowserModal?.classList.remove('active');
+  });
+
+  serverFileBrowserUpBtn?.addEventListener('click', async () => {
+    const parentPath = serverFileBrowserUpBtn.dataset.parentPath;
+    if (!parentPath) {
+      return;
+    }
+    await openServerFileBrowser(parentPath);
+  });
+
+  serverFileBrowserRefreshBtn?.addEventListener('click', async () => {
+    if (!currentServerBrowserPath) {
+      return;
+    }
+    await openServerFileBrowser(currentServerBrowserPath);
   });
 
   settingsBtn?.addEventListener('click', () => {
