@@ -202,70 +202,10 @@ const FEEDBACK_COUNT_FOR_RETRAIN = 5;
 const DEFAULT_OUTPUT_PATH = './output';
 const MODEL_SETTINGS_REFRESH_MS = 5000;
 const PROFILE_PREVIEW_FRAME_LIMIT = 12;
-const MAX_SOURCE_FOLDERS = 3;
 
-function safeJsonParse(rawValue, fallbackValue) {
-  if (!rawValue) {
-    return fallbackValue;
-  }
-  try {
-    return JSON.parse(rawValue);
-  } catch (err) {
-    return fallbackValue;
-  }
-}
+// Source folder init (single path)
+const initialSourceFolderPath = String(localStorage.getItem('sourceFolderPath') || '').trim();
 
-function normalizeSourceFolders(folders) {
-  if (!Array.isArray(folders)) {
-    return [];
-  }
-
-  const seen = new Set();
-  const normalized = [];
-
-  folders.forEach((folder) => {
-    const cleaned = String(folder || '').trim();
-    if (!cleaned || seen.has(cleaned)) {
-      return;
-    }
-    seen.add(cleaned);
-    normalized.push(cleaned);
-  });
-
-  return normalized.slice(0, MAX_SOURCE_FOLDERS);
-}
-
-function clampSourceFolderIndex(index, folders) {
-  const parsed = Number(index);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    return 0;
-  }
-
-  if (!Array.isArray(folders) || folders.length === 0) {
-    return 0;
-  }
-
-  return Math.min(Math.trunc(parsed), folders.length - 1);
-}
-
-function loadInitialSourceFolders() {
-  const storedFolders = safeJsonParse(localStorage.getItem('sourceFolders'), []);
-  const normalized = normalizeSourceFolders(storedFolders);
-
-  if (normalized.length > 0) {
-    return normalized;
-  }
-
-  const legacyFolder = String(localStorage.getItem('sourceFolderPath') || '').trim();
-  return legacyFolder ? [legacyFolder] : [];
-}
-
-const initialSourceFolders = loadInitialSourceFolders();
-const initialActiveSourceFolderIndex = clampSourceFolderIndex(
-  localStorage.getItem('activeSourceFolderIndex'),
-  initialSourceFolders
-);
-const initialSourceFolderPath = initialSourceFolders[initialActiveSourceFolderIndex] || '';
 
 // State Management
 let appState = {
@@ -286,8 +226,6 @@ let appState = {
   nsfwAnalysis: {},
   isCutting: false,
   filesDownloaded: false,
-  sourceFolders: initialSourceFolders,
-  activeSourceFolderIndex: initialActiveSourceFolderIndex,
   sourceFolderPath: initialSourceFolderPath,
   destinationFolderPath: localStorage.getItem('destinationFolderPath') || DEFAULT_OUTPUT_PATH,
   lastExportFolderPath: '',
@@ -372,11 +310,9 @@ const settingsModal = document.getElementById('settingsModal');
 const settingsBtn = document.getElementById('settingsBtn');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const closeSettingsConfirmBtn = document.getElementById('closeSettingsConfirmBtn');
+const sourceFolderStatus = document.getElementById('sourceFolderStatus');
 const sourceFolderBtn = document.getElementById('sourceFolderBtn');
 const sourceFolderPath = document.getElementById('sourceFolderPath');
-const sourceFolderClear = document.getElementById('sourceFolderClear');
-const sourceFolderPanels = document.getElementById('sourceFolderPanels');
-const sourceFolderPanelsMode = document.getElementById('sourceFolderPanelsMode');
 const destinationFolderBtn = document.getElementById('destinationFolderBtn');
 const destinationFolderPath = document.getElementById('destinationFolderPath');
 const destinationFolderClear = document.getElementById('destinationFolderClear');
@@ -417,12 +353,9 @@ if (!uploadArea) {
   uploadArea.addEventListener('click', async () => {
     console.log('Upload area clicked!');
     if (!window.electron?.ipcRenderer) {
-      if (!appState.sourceFolderPath) {
-        showError('Ustaw aktywny folder źródłowy w zakładce Foldery.');
-        return;
-      }
-
-      openServerFileBrowser(appState.sourceFolderPath);
+      // Browser / Unraid mode: always use server file browser
+      const startPath = appState.sourceFolderPath || '/data/source';
+      openServerFileBrowser(startPath);
       return;
     }
 
@@ -443,67 +376,113 @@ if (!uploadArea) {
   });
 }
 
-function formatServerBrowserItemMeta(entry) {
-  if (entry.type === 'directory') {
-    return 'Folder';
-  }
-  const size = Number(entry.size || 0);
-  if (!Number.isFinite(size) || size <= 0) {
-    return 'Plik video';
-  }
-  const sizeMb = size / (1024 * 1024);
-  return `Plik video · ${sizeMb.toFixed(sizeMb >= 100 ? 0 : 1)} MB`;
+function buildBreadcrumb(currentPath) {
+  const sfbPath = document.getElementById('serverFileBrowserPath');
+  if (!sfbPath) return;
+
+  // Split path into segments
+  const parts = currentPath.replace(/\\/g, '/').split('/').filter(Boolean);
+  // parts for /data/source/sub → ['data', 'source', 'sub']
+
+  let html = `<span class="sfb-breadcrumb-item" data-path="/">&#127968;</span>`;
+
+  let accumulated = '';
+  parts.forEach((part, i) => {
+    accumulated += '/' + part;
+    const pathForSegment = accumulated;
+    html += `<span class="sfb-breadcrumb-sep">&gt;</span>`;
+    if (i === parts.length - 1) {
+      html += `<span class="sfb-breadcrumb-current">${part}</span>`;
+    } else {
+      html += `<span class="sfb-breadcrumb-item" data-path="${pathForSegment}">${part}</span>`;
+    }
+  });
+
+  sfbPath.innerHTML = html;
+
+  sfbPath.querySelectorAll('.sfb-breadcrumb-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const targetPath = el.dataset.path;
+      if (targetPath) openServerFileBrowser(targetPath);
+    });
+  });
 }
 
 function renderServerFileBrowser(payload) {
   currentServerBrowserPath = payload?.currentPath || currentServerBrowserPath || '';
 
-  if (serverFileBrowserPath) {
-    serverFileBrowserPath.textContent = currentServerBrowserPath || '(brak folderu)';
+  buildBreadcrumb(currentServerBrowserPath);
+
+  const upBtn = document.getElementById('serverFileBrowserUpBtn');
+  if (upBtn) {
+    upBtn.disabled = !payload?.parentPath;
+    upBtn.dataset.parentPath = payload?.parentPath || '';
   }
 
-  if (serverFileBrowserUpBtn) {
-    serverFileBrowserUpBtn.disabled = !payload?.parentPath;
-    serverFileBrowserUpBtn.dataset.parentPath = payload?.parentPath || '';
-  }
-
-  if (!serverFileBrowserList) {
-    return;
-  }
+  const list = document.getElementById('serverFileBrowserList');
+  if (!list) return;
 
   const entries = Array.isArray(payload?.entries) ? payload.entries : [];
-  if (entries.length === 0) {
-    serverFileBrowserList.innerHTML = '<div class="server-browser-empty">Brak folderów i plików video w tej lokalizacji.</div>';
+
+  let rowsHtml = '';
+
+  // Parent Directory row
+  if (payload?.parentPath) {
+    rowsHtml += `
+      <div class="sfb-row sfb-parent sfb-dir" data-path="${payload.parentPath}" data-type="directory">
+        <div class="sfb-row-check"></div>
+        <div class="sfb-row-icon">&#128193;</div>
+        <div class="sfb-row-name">Folder nadrzędny (..) </div>
+        <div class="sfb-row-size"></div>
+      </div>`;
+  }
+
+  if (entries.length === 0 && !payload?.parentPath) {
+    list.innerHTML = '<div class="sfb-empty">Brak plików i folderów w tej lokalizacji.</div>';
     return;
   }
 
-  serverFileBrowserList.innerHTML = entries.map((entry) => `
-    <div class="server-browser-item">
-      <div class="server-browser-item-main">
-        <div class="server-browser-item-name">${entry.type === 'directory' ? '📁' : '🎬'} ${entry.name}</div>
-        <div class="server-browser-item-meta">${formatServerBrowserItemMeta(entry)}</div>
-      </div>
-      <button type="button" class="btn btn-secondary server-browser-action" data-path="${entry.path}" data-type="${entry.type}">${entry.type === 'directory' ? 'Otwórz' : 'Wybierz'}</button>
-    </div>
-  `).join('');
+  entries.forEach(entry => {
+    const isDir = entry.type === 'directory';
+    const icon = isDir ? '&#128193;' : '&#127916;';
+    const size = isDir ? '' : formatFileSize(entry.size);
+    const rowClass = isDir ? 'sfb-row sfb-dir' : 'sfb-row sfb-file';
+    const checkHtml = isDir ? '' : '<input type="checkbox" onclick="event.stopPropagation()">';
+    rowsHtml += `
+      <div class="${rowClass}" data-path="${entry.path}" data-type="${entry.type}">
+        <div class="sfb-row-check">${checkHtml}</div>
+        <div class="sfb-row-icon">${icon}</div>
+        <div class="sfb-row-name">${entry.name}</div>
+        <div class="sfb-row-size">${size}</div>
+      </div>`;
+  });
 
-  serverFileBrowserList.querySelectorAll('.server-browser-action').forEach((button) => {
-    button.addEventListener('click', async (event) => {
-      const targetPath = event.currentTarget.dataset.path;
-      const targetType = event.currentTarget.dataset.type;
-      if (!targetPath) {
-        return;
-      }
+  list.innerHTML = rowsHtml;
+
+  list.querySelectorAll('.sfb-row').forEach(row => {
+    row.addEventListener('click', async (e) => {
+      if (e.target.type === 'checkbox') return;
+      const targetPath = row.dataset.path;
+      const targetType = row.dataset.type;
+      if (!targetPath) return;
 
       if (targetType === 'directory') {
         await openServerFileBrowser(targetPath);
-        return;
+      } else {
+        document.getElementById('serverFileBrowserModal')?.classList.remove('active');
+        await handleFileSelected(targetPath);
       }
-
-      serverFileBrowserModal?.classList.remove('active');
-      await handleFileSelected(targetPath);
     });
   });
+}
+
+function formatFileSize(bytes) {
+  const n = Number(bytes || 0);
+  if (!n || n <= 0) return '';
+  if (n >= 1073741824) return (n / 1073741824).toFixed(1) + ' GB';
+  if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+  if (n >= 1024) return (n / 1024).toFixed(0) + ' KB';
+  return n + ' B';
 }
 
 async function openServerFileBrowser(dirPath) {
@@ -513,13 +492,11 @@ async function openServerFileBrowser(dirPath) {
     return;
   }
 
-  serverFileBrowserModal?.classList.add('active');
-  if (serverFileBrowserPath) {
-    serverFileBrowserPath.textContent = 'Ładowanie...';
-  }
-  if (serverFileBrowserList) {
-    serverFileBrowserList.innerHTML = '<div class="server-browser-empty">Ładowanie listy plików...</div>';
-  }
+  document.getElementById('serverFileBrowserModal')?.classList.add('active');
+  const sfbPath = document.getElementById('serverFileBrowserPath');
+  const sfbList = document.getElementById('serverFileBrowserList');
+  if (sfbPath) sfbPath.textContent = 'Ładowanie...';
+  if (sfbList) sfbList.innerHTML = '<div class="sfb-empty">Ładowanie listy plików...</div>';
 
   try {
     const response = await fetch(API.BROWSE_SERVER_FILES, {
@@ -535,141 +512,27 @@ async function openServerFileBrowser(dirPath) {
 
     renderServerFileBrowser(payload);
   } catch (err) {
-    if (serverFileBrowserList) {
-      serverFileBrowserList.innerHTML = `<div class="server-browser-empty">${err.message}</div>`;
-    }
-    if (serverFileBrowserPath) {
-      serverFileBrowserPath.textContent = requestedPath;
-    }
-    showError('Błąd odczytu folderu źródłowego: ' + err.message);
+    if (sfbList) sfbList.innerHTML = `<div class="sfb-empty">${err.message}</div>`;
+    buildBreadcrumb(requestedPath);
+    showError('Błąd odczytu folderu: ' + err.message);
   }
 }
 
 function persistSourceFolderState() {
-  const folders = normalizeSourceFolders(appState.sourceFolders);
-  appState.sourceFolders = folders;
-  appState.activeSourceFolderIndex = clampSourceFolderIndex(appState.activeSourceFolderIndex, folders);
-  appState.sourceFolderPath = folders[appState.activeSourceFolderIndex] || '';
-
-  localStorage.setItem('sourceFolders', JSON.stringify(folders));
-  localStorage.setItem('activeSourceFolderIndex', String(appState.activeSourceFolderIndex || 0));
   localStorage.setItem('sourceFolderPath', appState.sourceFolderPath || '');
 }
 
-function addSourceFolder(folderPath) {
-  const cleaned = String(folderPath || '').trim();
-  if (!cleaned) {
-    return { added: false, activated: false, removedOldest: false };
-  }
-
-  let folders = normalizeSourceFolders(appState.sourceFolders);
-  const existingIndex = folders.indexOf(cleaned);
-
-  if (existingIndex >= 0) {
-    appState.sourceFolders = folders;
-    appState.activeSourceFolderIndex = existingIndex;
-    appState.sourceFolderPath = cleaned;
-    persistSourceFolderState();
-    return { added: false, activated: true, removedOldest: false };
-  }
-
-  let removedOldest = false;
-  if (folders.length >= MAX_SOURCE_FOLDERS) {
-    folders = folders.slice(1);
-    removedOldest = true;
-  }
-
-  folders.push(cleaned);
-  appState.sourceFolders = folders;
-  appState.activeSourceFolderIndex = folders.length - 1;
-  appState.sourceFolderPath = cleaned;
-  persistSourceFolderState();
-  return { added: true, activated: true, removedOldest };
-}
-
-function setActiveSourceFolder(index) {
-  const folders = normalizeSourceFolders(appState.sourceFolders);
-  if (folders.length === 0) {
-    appState.sourceFolders = [];
-    appState.activeSourceFolderIndex = 0;
-    appState.sourceFolderPath = '';
-    persistSourceFolderState();
-    return false;
-  }
-
-  const nextIndex = clampSourceFolderIndex(index, folders);
-  appState.sourceFolders = folders;
-  appState.activeSourceFolderIndex = nextIndex;
-  appState.sourceFolderPath = folders[nextIndex] || '';
-  persistSourceFolderState();
-  return true;
-}
-
-function getSourcePanelsMode() {
-  const configured = Number(localStorage.getItem('sourceFolderPanelsMode') || '2');
-  if (configured === 1 || configured === 2 || configured === 3) {
-    return configured;
-  }
-  return 2;
-}
-
-function renderSourceFolderPanels() {
-  if (!sourceFolderPanels) {
-    return;
-  }
-
-  const folders = normalizeSourceFolders(appState.sourceFolders);
-  appState.sourceFolders = folders;
-  appState.activeSourceFolderIndex = clampSourceFolderIndex(appState.activeSourceFolderIndex, folders);
-  appState.sourceFolderPath = folders[appState.activeSourceFolderIndex] || '';
-
-  const mode = getSourcePanelsMode();
-  sourceFolderPanels.className = `source-folder-panels cols-${mode}`;
-
-  if (sourceFolderPanelsMode) {
-    sourceFolderPanelsMode.value = String(mode);
-  }
-
-  if (folders.length === 0) {
-    sourceFolderPanels.innerHTML = '<div class="source-folder-empty">Brak folderów. Dodaj 1-3 lokalizacje źródłowe.</div>';
-    return;
-  }
-
-  sourceFolderPanels.innerHTML = folders
-    .map((folder, index) => {
-      const isActive = index === appState.activeSourceFolderIndex;
-      return `
-        <button type="button" class="source-folder-panel ${isActive ? 'active' : ''}" data-index="${index}" title="${folder}">
-          <span class="source-folder-panel-label">Panel ${index + 1}</span>
-          <span class="source-folder-panel-path">${folder}</span>
-        </button>
-      `;
-    })
-    .join('');
-}
-
-function getNormalizedFolderInputValue(inputElement) {
-  return String(inputElement?.value || '').trim();
-}
-
 function saveManualSourceFolder() {
-  const manualPath = getNormalizedFolderInputValue(sourceFolderPath);
+  const manualPath = String(sourceFolderPath?.value || '').trim();
   if (!manualPath) {
     showError('Wpisz ścieżkę folderu źródłowego.');
     return false;
   }
 
-  const result = addSourceFolder(manualPath);
+  appState.sourceFolderPath = manualPath;
+  persistSourceFolderState();
   updateSettingsDisplay();
-
-  if (result.added && result.removedOldest) {
-    showSuccess(`✓ Dodano folder źródłowy: ${manualPath} (zastąpiono najstarszy panel)`);
-  } else if (result.added) {
-    showSuccess(`✓ Dodano folder źródłowy: ${manualPath}`);
-  } else {
-    showSuccess(`✓ Ustawiono aktywny folder źródłowy: ${manualPath}`);
-  }
-
+  showSuccess(`✓ Folder źródłowy zapisany: ${manualPath}`);
   return true;
 }
 
@@ -4078,23 +3941,21 @@ async function refreshModelSettingsData() {
 
 // Update Settings Display
 function updateSettingsDisplay() {
-  appState.sourceFolders = normalizeSourceFolders(appState.sourceFolders);
-  appState.activeSourceFolderIndex = clampSourceFolderIndex(appState.activeSourceFolderIndex, appState.sourceFolders);
-  appState.sourceFolderPath = appState.sourceFolders[appState.activeSourceFolderIndex] || '';
-
   if (sourceFolderPath) {
     sourceFolderPath.value = appState.sourceFolderPath || '';
   }
   if (destinationFolderPath) {
     destinationFolderPath.value = appState.destinationFolderPath || DEFAULT_OUTPUT_PATH;
   }
-  if (sourceFolderClear) {
-    sourceFolderClear.style.display = appState.sourceFolders.length > 0 ? 'inline-flex' : 'none';
-  }
   if (destinationFolderClear) {
     destinationFolderClear.style.display = appState.destinationFolderPath !== DEFAULT_OUTPUT_PATH ? 'inline-flex' : 'none';
   }
-  
+  if (sourceFolderStatus) {
+    sourceFolderStatus.textContent = appState.sourceFolderPath
+      ? `✓ Aktywna lokalizacja: ${appState.sourceFolderPath}`
+      : 'Brak ustawionego folderu źródłowego';
+  }
+
   // Load retention days from localStorage
   const savedRetentionDays = localStorage.getItem('retentionDays') || '90';
   if (retentionDaysInput) {
@@ -4104,7 +3965,6 @@ function updateSettingsDisplay() {
     retentionDaysValue.textContent = `${savedRetentionDays} dni`;
   }
 
-  renderSourceFolderPanels();
   renderModelTrainingFolders();
 }
 
@@ -4186,22 +4046,19 @@ document.addEventListener('DOMContentLoaded', () => {
     segmentsModal.classList.remove('active');
   });
 
-  closeServerFileBrowserBtn?.addEventListener('click', () => {
-    serverFileBrowserModal?.classList.remove('active');
+  document.getElementById('closeServerFileBrowserBtn')?.addEventListener('click', () => {
+    document.getElementById('serverFileBrowserModal')?.classList.remove('active');
   });
 
-  serverFileBrowserUpBtn?.addEventListener('click', async () => {
-    const parentPath = serverFileBrowserUpBtn.dataset.parentPath;
-    if (!parentPath) {
-      return;
-    }
+  document.getElementById('serverFileBrowserUpBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('serverFileBrowserUpBtn');
+    const parentPath = btn?.dataset.parentPath;
+    if (!parentPath) return;
     await openServerFileBrowser(parentPath);
   });
 
-  serverFileBrowserRefreshBtn?.addEventListener('click', async () => {
-    if (!currentServerBrowserPath) {
-      return;
-    }
+  document.getElementById('serverFileBrowserRefreshBtn')?.addEventListener('click', async () => {
+    if (!currentServerBrowserPath) return;
     await openServerFileBrowser(currentServerBrowserPath);
   });
 
@@ -4246,54 +4103,20 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const path = await window.electron?.ipcRenderer?.invoke('open-folder-dialog');
       if (path) {
-        const result = addSourceFolder(path);
+        appState.sourceFolderPath = path;
+        persistSourceFolderState();
         updateSettingsDisplay();
-        if (result.added && result.removedOldest) {
-          showSuccess(`✓ Dodano folder źródłowy: ${path} (zastąpiono najstarszy panel)`);
-        } else if (result.added) {
-          showSuccess(`✓ Dodano folder źródłowy: ${path}`);
-        } else {
-          showSuccess(`✓ Ustawiono aktywny folder źródłowy: ${path}`);
-        }
+        showSuccess(`✓ Folder źródłowy: ${path}`);
       }
     } catch (err) {
       showError('Błąd wyboru folderu: ' + err.message);
     }
   });
 
-  sourceFolderClear?.addEventListener('click', (e) => {
+  sourceFolderPath?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
     e.preventDefault();
-    e.stopPropagation();
-    appState.sourceFolders = [];
-    appState.activeSourceFolderIndex = 0;
-    appState.sourceFolderPath = '';
-    localStorage.removeItem('sourceFolders');
-    localStorage.removeItem('activeSourceFolderIndex');
-    localStorage.setItem('sourceFolderPath', '');
-    updateSettingsDisplay();
-    showSuccess('✓ Foldery źródłowe usunięte');
-  });
-
-  sourceFolderPanels?.addEventListener('click', (e) => {
-    const panelButton = e.target.closest('.source-folder-panel');
-    if (!panelButton) {
-      return;
-    }
-
-    const nextIndex = Number(panelButton.dataset.index);
-    if (!setActiveSourceFolder(nextIndex)) {
-      return;
-    }
-
-    updateSettingsDisplay();
-    showSuccess(`✓ Aktywny panel źródłowy: ${appState.sourceFolderPath}`);
-  });
-
-  sourceFolderPanelsMode?.addEventListener('change', (e) => {
-    const selectedMode = Number(e.target?.value);
-    const normalizedMode = selectedMode === 1 || selectedMode === 2 || selectedMode === 3 ? selectedMode : 2;
-    localStorage.setItem('sourceFolderPanelsMode', String(normalizedMode));
-    renderSourceFolderPanels();
+    saveManualSourceFolder();
   });
 
   destinationFolderBtn?.addEventListener('click', async (e) => {
@@ -4325,15 +4148,6 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('destinationFolderPath', DEFAULT_OUTPUT_PATH);
     updateSettingsDisplay();
     showSuccess('✓ Folder docelowy resetowany do domyślnego');
-  });
-
-  sourceFolderPath?.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') {
-      return;
-    }
-
-    e.preventDefault();
-    saveManualSourceFolder();
   });
 
   destinationFolderPath?.addEventListener('keydown', (e) => {

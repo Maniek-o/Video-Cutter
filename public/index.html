@@ -136,18 +136,24 @@
                 </div>
             </div>
 
-            <div class="segments-modal" id="serverFileBrowserModal">
-                <div class="modal-content-segments modal-content-browser">
-                    <div class="modal-header-segments">
-                        <h2>Pliki z folderu źródłowego</h2>
-                        <button type="button" class="modal-close-btn" id="closeServerFileBrowserBtn">✕</button>
+            <div class="sfb-overlay" id="serverFileBrowserModal">
+                <div class="sfb-dialog">
+                    <div class="sfb-dialog-header">
+                        <span>Wybierz plik</span>
+                        <button type="button" class="sfb-close-btn" id="closeServerFileBrowserBtn">✕</button>
                     </div>
-                    <div class="server-browser-path" id="serverFileBrowserPath">(brak folderu)</div>
-                    <div class="server-browser-toolbar">
-                        <button type="button" class="btn btn-secondary" id="serverFileBrowserUpBtn">⬆ Wyżej</button>
-                        <button type="button" class="btn btn-secondary" id="serverFileBrowserRefreshBtn">Odśwież</button>
+                    <div class="sfb-breadcrumb" id="serverFileBrowserPath"></div>
+                    <div class="sfb-table-head">
+                        <div class="sfb-col-check"></div>
+                        <div class="sfb-col-type">TYP</div>
+                        <div class="sfb-col-name">NAZWA</div>
+                        <div class="sfb-col-size">ROZMIAR</div>
                     </div>
-                    <div id="serverFileBrowserList" class="server-browser-list"></div>
+                    <div id="serverFileBrowserList" class="sfb-list"></div>
+                    <div class="sfb-footer">
+                        <button type="button" class="btn btn-secondary" id="serverFileBrowserRefreshBtn">↺ Odśwież</button>
+                        <button type="button" class="btn btn-primary" id="serverFileBrowserUpBtn">⬆ Wyżej</button>
+                    </div>
                 </div>
             </div>
 
@@ -166,32 +172,23 @@
                     <div class="settings-content">
                         <div class="settings-tab-panel active" data-tab="folders">
                             <div class="settings-section">
-                                <h3>📂 Folder źródłowy (otwarcia plików)</h3>
+                                <h3>📂 Folder źródłowy (lokalizacja plików wideo)</h3>
                                 <div class="folder-picker">
-                                    <input type="text" id="sourceFolderPath" placeholder="Wpisz ścieżkę folderu źródłowego lub użyj wyboru folderu">
-                                    <button type="button" class="btn btn-primary" id="sourceFolderBtn">Dodaj / wybierz folder (max 3)</button>
-                                    <button type="button" class="btn btn-secondary" id="sourceFolderClear" style="display: none;">✕ Wyczyść wszystkie</button>
+                                    <input type="text" id="sourceFolderPath" placeholder="np. /data/source">
+                                    <button type="button" class="btn btn-primary" id="sourceFolderBtn">💾 Zapisz</button>
                                 </div>
-                                <div class="settings-inline-actions source-folder-mode-row">
-                                    <label for="sourceFolderPanelsMode">Widok paneli:</label>
-                                    <select id="sourceFolderPanelsMode" class="source-folder-mode-select">
-                                        <option value="1">1 panel</option>
-                                        <option value="2" selected>2 panele</option>
-                                        <option value="3">3 panele</option>
-                                    </select>
-                                </div>
-                                <div id="sourceFolderPanels" class="source-folder-panels cols-2"></div>
-                                <p class="folder-hint">💡 W Electron możesz wybrać folder oknem systemowym. W Unraid wpisz ścieżkę ręcznie i kliknij przycisk. Kliknij panel, aby ustawić aktywną lokalizację.</p>
+                                <div id="sourceFolderStatus" class="folder-status"></div>
+                                <p class="folder-hint">💡 W Unraid wpisz ścieżkę kontenera np. <strong>/data/source</strong>. Po zapisaniu kliknij obszar wgrywania, aby przeglądać pliki z serwera.</p>
                             </div>
 
                             <div class="settings-section">
                                 <h3>💾 Folder docelowy (eksport)</h3>
                                 <div class="folder-picker">
-                                    <input type="text" id="destinationFolderPath" placeholder="Wpisz ścieżkę folderu docelowego lub użyj wyboru folderu">
-                                    <button type="button" class="btn btn-primary" id="destinationFolderBtn">Zapisz / wybierz folder</button>
-                                    <button type="button" class="btn btn-secondary" id="destinationFolderClear" style="display: none;">✕ Wyczyść</button>
+                                    <input type="text" id="destinationFolderPath" placeholder="np. /data/output">
+                                    <button type="button" class="btn btn-primary" id="destinationFolderBtn">💾 Zapisz</button>
+                                    <button type="button" class="btn btn-secondary" id="destinationFolderClear" style="display: none;">✕ Resetuj</button>
                                 </div>
-                                <p class="folder-hint">💡 W Unraid wpisz ścieżkę ręcznie. Wyeksportowane fragmenty będą zapisywane w tym folderze.</p>
+                                <p class="folder-hint">💡 Wyeksportowane fragmenty będą zapisywane w tym folderze na serwerze.</p>
                             </div>
                         </div>
 
