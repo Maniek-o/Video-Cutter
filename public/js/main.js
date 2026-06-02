@@ -536,6 +536,45 @@ function renderSourceFolderPanels() {
     .join('');
 }
 
+function getNormalizedFolderInputValue(inputElement) {
+  return String(inputElement?.value || '').trim();
+}
+
+function saveManualSourceFolder() {
+  const manualPath = getNormalizedFolderInputValue(sourceFolderPath);
+  if (!manualPath) {
+    showError('Wpisz ścieżkę folderu źródłowego.');
+    return false;
+  }
+
+  const result = addSourceFolder(manualPath);
+  updateSettingsDisplay();
+
+  if (result.added && result.removedOldest) {
+    showSuccess(`✓ Dodano folder źródłowy: ${manualPath} (zastąpiono najstarszy panel)`);
+  } else if (result.added) {
+    showSuccess(`✓ Dodano folder źródłowy: ${manualPath}`);
+  } else {
+    showSuccess(`✓ Ustawiono aktywny folder źródłowy: ${manualPath}`);
+  }
+
+  return true;
+}
+
+function saveManualDestinationFolder() {
+  const manualPath = getNormalizedFolderInputValue(destinationFolderPath);
+  if (!manualPath) {
+    showError('Wpisz ścieżkę folderu docelowego.');
+    return false;
+  }
+
+  appState.destinationFolderPath = manualPath;
+  localStorage.setItem('destinationFolderPath', manualPath);
+  updateSettingsDisplay();
+  showSuccess(`✓ Folder docelowy: ${manualPath}`);
+  return true;
+}
+
 // Helper: handle selected file
 async function handleFileSelected(filePath) {
   console.log('File selected:', filePath);
@@ -3932,7 +3971,7 @@ function updateSettingsDisplay() {
   appState.sourceFolderPath = appState.sourceFolders[appState.activeSourceFolderIndex] || '';
 
   if (sourceFolderPath) {
-    sourceFolderPath.value = appState.sourceFolderPath || '(nie ustawiono)';
+    sourceFolderPath.value = appState.sourceFolderPath || '';
   }
   if (destinationFolderPath) {
     destinationFolderPath.value = appState.destinationFolderPath || DEFAULT_OUTPUT_PATH;
@@ -4067,6 +4106,12 @@ document.addEventListener('DOMContentLoaded', () => {
   sourceFolderBtn?.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (!window.electron?.ipcRenderer) {
+      saveManualSourceFolder();
+      return;
+    }
+
     try {
       const path = await window.electron?.ipcRenderer?.invoke('open-folder-dialog');
       if (path) {
@@ -4123,6 +4168,12 @@ document.addEventListener('DOMContentLoaded', () => {
   destinationFolderBtn?.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (!window.electron?.ipcRenderer) {
+      saveManualDestinationFolder();
+      return;
+    }
+
     try {
       const path = await window.electron?.ipcRenderer?.invoke('open-folder-dialog');
       if (path) {
@@ -4143,6 +4194,24 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('destinationFolderPath', DEFAULT_OUTPUT_PATH);
     updateSettingsDisplay();
     showSuccess('✓ Folder docelowy resetowany do domyślnego');
+  });
+
+  sourceFolderPath?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') {
+      return;
+    }
+
+    e.preventDefault();
+    saveManualSourceFolder();
+  });
+
+  destinationFolderPath?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') {
+      return;
+    }
+
+    e.preventDefault();
+    saveManualDestinationFolder();
   });
 
   modelTrainingFolderBtn?.addEventListener('click', async (e) => {

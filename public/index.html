@@ -153,8 +153,8 @@
                             <div class="settings-section">
                                 <h3>📂 Folder źródłowy (otwarcia plików)</h3>
                                 <div class="folder-picker">
-                                    <input type="text" id="sourceFolderPath" placeholder="Ścieżka folderu źródłowego" readonly>
-                                    <button type="button" class="btn btn-primary" id="sourceFolderBtn">Dodaj folder (max 3)</button>
+                                    <input type="text" id="sourceFolderPath" placeholder="Wpisz ścieżkę folderu źródłowego lub użyj wyboru folderu">
+                                    <button type="button" class="btn btn-primary" id="sourceFolderBtn">Dodaj / wybierz folder (max 3)</button>
                                     <button type="button" class="btn btn-secondary" id="sourceFolderClear" style="display: none;">✕ Wyczyść wszystkie</button>
                                 </div>
                                 <div class="settings-inline-actions source-folder-mode-row">
@@ -166,17 +166,17 @@
                                     </select>
                                 </div>
                                 <div id="sourceFolderPanels" class="source-folder-panels cols-2"></div>
-                                <p class="folder-hint">💡 Kliknij panel, aby ustawić aktywną lokalizację. "Wybierz plik" otworzy aktywny folder.</p>
+                                <p class="folder-hint">💡 W Electron możesz wybrać folder oknem systemowym. W Unraid wpisz ścieżkę ręcznie i kliknij przycisk. Kliknij panel, aby ustawić aktywną lokalizację.</p>
                             </div>
 
                             <div class="settings-section">
                                 <h3>💾 Folder docelowy (eksport)</h3>
                                 <div class="folder-picker">
-                                    <input type="text" id="destinationFolderPath" placeholder="Ścieżka folderu docelowego" readonly>
-                                    <button type="button" class="btn btn-primary" id="destinationFolderBtn">Wybierz folder</button>
+                                    <input type="text" id="destinationFolderPath" placeholder="Wpisz ścieżkę folderu docelowego lub użyj wyboru folderu">
+                                    <button type="button" class="btn btn-primary" id="destinationFolderBtn">Zapisz / wybierz folder</button>
                                     <button type="button" class="btn btn-secondary" id="destinationFolderClear" style="display: none;">✕ Wyczyść</button>
                                 </div>
-                                <p class="folder-hint">💡 Wyeksportowane fragmenty będą zapisywane w tym folderze</p>
+                                <p class="folder-hint">💡 W Unraid wpisz ścieżkę ręcznie. Wyeksportowane fragmenty będą zapisywane w tym folderze.</p>
                             </div>
                         </div>
 
