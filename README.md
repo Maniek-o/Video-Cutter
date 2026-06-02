@@ -54,9 +54,11 @@ Prywatne pliki modelu NSFW nie są częścią repozytorium GitHub ani kontekstu 
 
 Jeśli Unraid nie pokazuje aktualizacji kontenera, najczęściej powód jest prosty: kontener nie korzysta z obrazu z rejestru albo rejestr nie dostaje nowego `latest`. Żeby aktualizacje były wykrywane, używaj obrazu `ghcr.io/maniek-o/video-cutter:latest`. Lokalny build z Dockerfile lub własna nazwa obrazu nie będzie raportowana przez mechanizm aktualizacji Unraid.
 
-Domyślne lokalizacje:
-- Windows/dev: `Pliki do modelu NFSW` w katalogu projektu
-- Kontener: `/data/nsfw-model`
+Domyślne lokalizacje w kontenerze:
+- Folder źródłowy: `/data/source`
+- Folder docelowy: `/data/output`
+- Folder tymczasowy: `/data/temp`
+- Folder modelu NSFW: `/data/nsfw-model`
 
 Przykład uruchomienia:
 
@@ -65,12 +67,24 @@ docker run -d \
   --name video-cutter \
   -p 5001:5001 \
   -p 5003:5003 \
+  -e VIDEO_CUTTER_UPLOADS_DIR=/data/source \
+  -e VIDEO_CUTTER_CACHE_DIR=/data/temp/cache \
+  -e VIDEO_CUTTER_OUTPUT_DIR=/data/output \
+  -e VIDEO_CUTTER_ML_DATA_DIR=/data/temp/ml-data \
+  -e NSFW_EXTERNAL_LOG_DIR=/data/temp/nsfw-logs \
   -e NSFW_MODEL_DATA_DIR=/data/nsfw-model \
+  -v /mnt/user/appdata/video-cutter/source:/data/source \
+  -v /mnt/user/appdata/video-cutter/output:/data/output \
+  -v /mnt/user/appdata/video-cutter/temp:/data/temp \
   -v /mnt/user/appdata/video-cutter/nsfw-model:/data/nsfw-model \
   ghcr.io/maniek-o/video-cutter:latest
 ```
 
-Na Unraid skopiuj swoje prywatne pliki modelu do katalogu hosta, na przykład `/mnt/user/appdata/video-cutter/nsfw-model`, a następnie zamontuj go w kontenerze pod `/data/nsfw-model`.
+Na Unraid ustaw te 4 foldery jako osobne mounty:
+- `/mnt/user/appdata/video-cutter/source` -> `/data/source`
+- `/mnt/user/appdata/video-cutter/output` -> `/data/output`
+- `/mnt/user/appdata/video-cutter/temp` -> `/data/temp`
+- `/mnt/user/appdata/video-cutter/nsfw-model` -> `/data/nsfw-model`
 
 Przykładowa konfiguracja kontenera w Unraid:
 - Repository: `ghcr.io/maniek-o/video-cutter:latest`
@@ -78,8 +92,11 @@ Przykładowa konfiguracja kontenera w Unraid:
 - WebUI: `http://[IP]:[PORT:5001]`
 - Port map 1: `5001` host -> `5001` container
 - Port map 2: `5003` host -> `5003` container
+- Path: `/mnt/user/appdata/video-cutter/source` host -> `/data/source` container
+- Path: `/mnt/user/appdata/video-cutter/output` host -> `/data/output` container
+- Path: `/mnt/user/appdata/video-cutter/temp` host -> `/data/temp` container
 - Path: `/mnt/user/appdata/video-cutter/nsfw-model` host -> `/data/nsfw-model` container
-- Variable: `NSFW_MODEL_DATA_DIR=/data/nsfw-model`
+- Variables: `VIDEO_CUTTER_UPLOADS_DIR=/data/source`, `VIDEO_CUTTER_CACHE_DIR=/data/temp/cache`, `VIDEO_CUTTER_OUTPUT_DIR=/data/output`, `VIDEO_CUTTER_ML_DATA_DIR=/data/temp/ml-data`, `NSFW_EXTERNAL_LOG_DIR=/data/temp/nsfw-logs`, `NSFW_MODEL_DATA_DIR=/data/nsfw-model`
 - Device: `/dev/dri` -> `/dev/dri`
 
 Po wypchnięciu zmian do `master` workflow GitHub Actions opublikuje nowy obraz `ghcr.io/maniek-o/video-cutter:latest`. Dopiero wtedy Unraid będzie miał co wykryć jako nową wersję.

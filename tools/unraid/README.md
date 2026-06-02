@@ -35,10 +35,13 @@ chmod +x tools/unraid/install-template-unraid.sh
 Template file is created at:
 /boot/config/plugins/dockerMan/templates-user/my-video-cutter.xml
 
-The template exposes 3 independent editable locations in Unraid Edit:
-- NSFW source path (host)       -> mounted to /data/nsfw-source
-- NSFW payload path (host)      -> mounted to /data/nsfw-payload
-- NSFW model data path (host)   -> mounted to /data/nsfw-model (runtime target)
+The template exposes 4 clear editable locations in Unraid Edit:
+- 1. Folder źródłowy        -> mounted to /data/source
+- 2. Folder docelowy        -> mounted to /data/output
+- 3. Folder tymczasowy      -> mounted to /data/temp
+- 4. Folder modelu NSFW     -> mounted to /data/nsfw-model
+
+All four mounts are used by the container runtime. The model folder keeps the private NSFW files separate, while source/output/temp are used for uploads, exports, cache and app runtime data.
 
 4) Update/recreate container automatically on Unraid
 
@@ -47,7 +50,7 @@ chmod +x tools/unraid/update-video-cutter-unraid.sh
 ./tools/unraid/update-video-cutter-unraid.sh
 
 Optional env overrides:
-IMAGE=ghcr.io/maniek-o/video-cutter:latest MODEL_HOST_PATH=/mnt/user/appdata/video-cutter/nsfw-model WEBUI_PORT=5001 API_PORT=5003 USE_DRI=1 ./tools/unraid/update-video-cutter-unraid.sh
+IMAGE=ghcr.io/maniek-o/video-cutter:latest SOURCE_HOST_PATH=/mnt/user/appdata/video-cutter/source OUTPUT_HOST_PATH=/mnt/user/appdata/video-cutter/output TEMP_HOST_PATH=/mnt/user/appdata/video-cutter/temp MODEL_HOST_PATH=/mnt/user/appdata/video-cutter/nsfw-model WEBUI_PORT=5001 API_PORT=5003 USE_DRI=1 ./tools/unraid/update-video-cutter-unraid.sh
 
 5) Create Windows desktop shortcut for Electron remote WebUI
 

@@ -41,7 +41,11 @@ const PORT = 5000;
 const ML_BACKEND_URL = process.env.ML_BACKEND_URL || 'http://127.0.0.1:5003';
 const defaultNsfwModelDataDir = path.join(__dirname, 'Pliki do modelu NFSW');
 const nsfwModelDataDir = path.resolve(process.env.NSFW_MODEL_DATA_DIR || defaultNsfwModelDataDir);
-const nsfwExternalLogDir = path.resolve(process.env.NSFW_EXTERNAL_LOG_DIR || path.join(nsfwModelDataDir, 'logs'));
+const uploadsDir = path.resolve(process.env.VIDEO_CUTTER_UPLOADS_DIR || path.join(__dirname, 'uploads'));
+const cacheDir = path.resolve(process.env.VIDEO_CUTTER_CACHE_DIR || path.join(__dirname, 'cache'));
+const outputDir = path.resolve(process.env.VIDEO_CUTTER_OUTPUT_DIR || path.join(__dirname, 'output'));
+const mlDataDir = path.resolve(process.env.VIDEO_CUTTER_ML_DATA_DIR || path.join(__dirname, 'ml_data'));
+const nsfwExternalLogDir = path.resolve(process.env.NSFW_EXTERNAL_LOG_DIR || path.join(__dirname, 'temp', 'nsfw-logs'));
 const defaultExternalTrainingScript = process.platform === 'win32' ? 'c:\^ Claud\06_round_training.py' : '';
 const defaultExternalTrainingPython = process.platform === 'win32' ? 'c:\^ Claud\.venv\Scripts\python.exe' : '';
 const AUTO_MERGE_THRESHOLD = 45;
@@ -57,10 +61,6 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Directories
-const uploadsDir = path.join(__dirname, 'uploads');
-const cacheDir = path.join(__dirname, 'cache');
-const outputDir = path.join(__dirname, 'output');
-const mlDataDir = path.join(__dirname, 'ml_data');
 const personProfilePreviewClipsDir = path.join(mlDataDir, 'profile_preview_clips');
 const personProfilesPath = path.join(mlDataDir, 'person_profiles.json');
 const mlSettingsPath = path.join(mlDataDir, 'settings.json');

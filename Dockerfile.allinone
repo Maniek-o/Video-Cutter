@@ -1,7 +1,12 @@
 # Dockerfile: All-in-one (nginx + FastAPI backend)
 FROM python:3.10-slim
 
-ENV NSFW_MODEL_DATA_DIR=/data/nsfw-model
+ENV VIDEO_CUTTER_UPLOADS_DIR=/data/source \
+	VIDEO_CUTTER_CACHE_DIR=/data/temp/cache \
+	VIDEO_CUTTER_OUTPUT_DIR=/data/output \
+	VIDEO_CUTTER_ML_DATA_DIR=/data/temp/ml-data \
+	NSFW_EXTERNAL_LOG_DIR=/data/temp/nsfw-logs \
+	NSFW_MODEL_DATA_DIR=/data/nsfw-model
 
 # --- Backend dependencies ---
 WORKDIR /app
@@ -22,9 +27,9 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-RUN mkdir -p /data/nsfw-model
+RUN mkdir -p /data/source /data/output /data/temp/cache /data/temp/ml-data /data/temp/nsfw-logs /data/nsfw-model
 
-VOLUME ["/data/nsfw-model"]
+VOLUME ["/data/source", "/data/output", "/data/temp", "/data/nsfw-model"]
 
 # --- Expose ports ---
 EXPOSE 5001 5003

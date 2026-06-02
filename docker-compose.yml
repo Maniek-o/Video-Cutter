@@ -8,9 +8,17 @@ services:
       - "5001:5001"
       - "5003:5003"
     environment:
+      VIDEO_CUTTER_UPLOADS_DIR: /data/source
+      VIDEO_CUTTER_CACHE_DIR: /data/temp/cache
+      VIDEO_CUTTER_OUTPUT_DIR: /data/output
+      VIDEO_CUTTER_ML_DATA_DIR: /data/temp/ml-data
+      NSFW_EXTERNAL_LOG_DIR: /data/temp/nsfw-logs
       NSFW_MODEL_DATA_DIR: /data/nsfw-model
     devices:
       - /dev/dri:/dev/dri
     volumes:
+      - /mnt/user/appdata/video-cutter/source:/data/source
+      - /mnt/user/appdata/video-cutter/output:/data/output
+      - /mnt/user/appdata/video-cutter/temp:/data/temp
       - /mnt/user/appdata/video-cutter/nsfw-model:/data/nsfw-model
     restart: unless-stopped
