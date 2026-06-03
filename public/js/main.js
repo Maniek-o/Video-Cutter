@@ -157,6 +157,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const API = {
   UPLOAD: '/api/upload',
   BROWSE_SERVER_FILES: '/api/browse-server-files',
+  RUNTIME_PATHS: '/api/runtime-paths',
   CLEANUP: '/api/cleanup',
   CUT: '/api/cut',
   SAVE_ALL: '/api/save-all',
@@ -241,6 +242,7 @@ let appState = {
 let modelSettingsPoller = null;
 let modelSettingsRefreshToken = 0;
 let modelSettingsLastRefreshedAt = null;
+let runtimePathsLoaded = false;
 
 // ─── Queue State ──────────────────────────────────────────────────────────────
 const fileQueue = [];
@@ -353,6 +355,9 @@ if (!uploadArea) {
   uploadArea.addEventListener('click', async () => {
     console.log('Upload area clicked!');
     if (!window.electron?.ipcRenderer) {
+      if (!appState.sourceFolderPath) {
+        await syncFolderPathsFromBackend();
+      }
       // Browser / Unraid mode: always use server file browser
       const startPath = appState.sourceFolderPath || '/data/source';
       openServerFileBrowser(startPath);
@@ -548,6 +553,34 @@ function saveManualDestinationFolder() {
   updateSettingsDisplay();
   showSuccess(`✓ Folder docelowy: ${manualPath}`);
   return true;
+}
+
+async function syncFolderPathsFromBackend() {
+  try {
+    const response = await fetch(API.RUNTIME_PATHS);
+    if (!response.ok) {
+      return;
+    }
+
+    const payload = await response.json().catch(() => ({}));
+    const detectedSourcePath = String(payload?.uploadsDir || '').trim();
+    const detectedOutputPath = String(payload?.outputDir || '').trim();
+
+    if (!appState.sourceFolderPath && detectedSourcePath) {
+      appState.sourceFolderPath = detectedSourcePath;
+      persistSourceFolderState();
+    }
+
+    if (!localStorage.getItem('destinationFolderPath') && detectedOutputPath) {
+      appState.destinationFolderPath = detectedOutputPath;
+      localStorage.setItem('destinationFolderPath', detectedOutputPath);
+    }
+
+    runtimePathsLoaded = true;
+    updateSettingsDisplay();
+  } catch (err) {
+    console.warn('Failed to fetch runtime paths:', err.message);
+  }
 }
 
 // Helper: handle selected file
@@ -3975,6 +4008,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load settings display (including retention days)
   updateSettingsDisplay();
+  if (!runtimePathsLoaded) {
+    syncFolderPathsFromBackend();
+  }
   setSettingsTab(appState.settingsActiveTab || 'folders');
 
   if (profilesAdvancedToggle) {

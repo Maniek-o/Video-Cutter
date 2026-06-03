@@ -1816,6 +1816,17 @@ app.get('/api/test', (req, res) => {
   });
 });
 
+app.get('/api/runtime-paths', (req, res) => {
+  res.json({
+    uploadsDir,
+    outputDir,
+    cacheDir,
+    mlDataDir,
+    nsfwExternalLogDir,
+    nsfwModelDataDir
+  });
+});
+
 // Upload video
 app.post('/api/upload', upload.single('video'), (req, res) => {
   console.log('Upload request received');
